@@ -31,8 +31,8 @@ class PinholeCamera;
 
 
 //-----------------------------------------------------------------------------
-// 
-// GLUTDisplay 
+//
+// GLUTDisplay
 //
 //-----------------------------------------------------------------------------
 
@@ -86,11 +86,11 @@ private:
   //   - If m_save_frames_to_file is set, prints one copy of frame to file:
   //     ${m_title}.ppm. m_title is set to m_save_frames_basename if non-empty.
   static void runBenchmarkNoDisplay();
-  
+
   // Set the current continuous drawing mode, while preserving the app's choice.
   static void setCurContinuousMode(contDraw_E continuous_mode);
 
-  // Cleans up the rendering context and quits.  If there wasn't error cleaning up, the 
+  // Cleans up the rendering context and quits.  If there wasn't error cleaning up, the
   // return code is passed out, otherwise 2 is used as the return code.
   static void quit(int return_code=0);
 

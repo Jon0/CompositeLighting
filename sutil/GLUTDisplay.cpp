@@ -51,8 +51,8 @@
 using namespace optix;
 
 //-----------------------------------------------------------------------------
-// 
-// GLUTDisplay class implementation 
+//
+// GLUTDisplay class implementation
 //-----------------------------------------------------------------------------
 
 Mouse*         GLUTDisplay::m_mouse                = 0;
@@ -114,7 +114,7 @@ bool           GLUTDisplay::m_enable_cpu_rendering = false;
 
 
 
-inline void removeArg( int& i, int& argc, char** argv ) 
+inline void removeArg( int& i, int& argc, char** argv )
 {
   char* disappearing_arg = argv[i];
   for(int j = i; j < argc-1; ++j) {
@@ -388,7 +388,7 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   //Calculate window position offset
   m_old_window_x_offset = glutGet(GLUT_INIT_WINDOW_X) - glutGet(GLUT_WINDOW_X);
   m_old_window_y_offset = glutGet(GLUT_INIT_WINDOW_Y) - glutGet(GLUT_WINDOW_Y);
-  
+
   // Enter main loop
   glutMainLoop();
 }
@@ -398,10 +398,10 @@ void GLUTDisplay::setCamera(SampleScene::InitialCameraData& camera_data)
   m_camera->setParameters(camera_data.eye,
                          camera_data.lookat,
                          camera_data.up,
-                         camera_data.vfov, 
+                         camera_data.vfov,
                          camera_data.vfov,
                          PinholeCamera::KeepVertical );
-  glutPostRedisplay();  
+  glutPostRedisplay();
 }
 
 // This is an internal function that does the actual work.
@@ -507,7 +507,7 @@ void GLUTDisplay::runBenchmarkNoDisplay( )
   printf( "PREPROCESS: Sphere Tessellation | compile %7.4f s | accelbuild %7.4f s\n",
           compilation_time,
           accel_build_time );
-  
+
   // Warmup frames
   if ( m_cur_continuous_mode == CDBenchmarkTimed ) {
     // Count elapsed time
@@ -550,7 +550,7 @@ void GLUTDisplay::runBenchmarkNoDisplay( )
 
   // Save image if necessary
   if( m_save_frames_to_file ) {
-    std::string filename = m_save_frames_basename.empty() ?  m_title + ".ppm" : m_save_frames_basename+ ".ppm"; 
+    std::string filename = m_save_frames_basename.empty() ?  m_title + ".ppm" : m_save_frames_basename+ ".ppm";
     Buffer buffer = m_scene->getOutputBuffer();
     sutilDisplayFilePPM( filename.c_str(), buffer->get() );
   }
@@ -662,7 +662,7 @@ void GLUTDisplay::keyPressed(unsigned char key, int x, int y)
     case '[':
       m_scene->incrementCPUThreads(-1);
       break;
-      
+
     case ']':
       m_scene->incrementCPUThreads(1);
       break;
@@ -742,7 +742,7 @@ void GLUTDisplay::displayFrame()
   }
 
   // Draw the resulting image
-  Buffer buffer = m_scene->getOutputBuffer(); 
+  Buffer buffer = m_scene->getOutputBuffer();
   RTsize buffer_width_rts, buffer_height_rts;
   buffer->getSize( buffer_width_rts, buffer_height_rts );
   int buffer_width  = static_cast<int>(buffer_width_rts);
@@ -859,7 +859,7 @@ void GLUTDisplay::displayFrame()
 
     RTsize elementSize = buffer->getElementSize();
     int align = 1;
-    if      ((elementSize % 8) == 0) align = 8; 
+    if      ((elementSize % 8) == 0) align = 8;
     else if ((elementSize % 4) == 0) align = 4;
     else if ((elementSize % 2) == 0) align = 2;
     glPixelStorei(GL_UNPACK_ALIGNMENT, align);
@@ -892,7 +892,7 @@ void GLUTDisplay::display()
     // render the scene
     float3 eye, U, V, W;
     m_camera->getEyeUVW( eye, U, V, W );
-    // Don't be tempted to just start filling in the values outside of a constructor, 
+    // Don't be tempted to just start filling in the values outside of a constructor,
     // because if you add a parameter it's easy to forget to add it here.
     SampleScene::RayGenCameraData camera_data( eye, U, V, W );
     {nvtx::ScopedRange r( "trace" );
@@ -915,10 +915,10 @@ void GLUTDisplay::display()
     exit(2);
   }
 
-  // Do not draw text on 1st frame -- issue on linux causes problems with 
+  // Do not draw text on 1st frame -- issue on linux causes problems with
   // glDrawPixels call if drawText glutBitmapCharacter is called on first frame.
   if ( m_display_fps && m_cur_continuous_mode != CDNone && m_frame_count > 1 ) {
-    // Output fps 
+    // Output fps
     double current_time;
     sutilCurrentTime( &current_time );
     double dt = current_time - m_last_frame_time;

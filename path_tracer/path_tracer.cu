@@ -65,8 +65,8 @@ rtDeclareVariable(unsigned int,  pathtrace_ray_type, , );
 rtDeclareVariable(unsigned int,  pathtrace_shadow_ray_type, , );
 rtDeclareVariable(unsigned int,  rr_begin_depth, , );
 
-rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
-rtDeclareVariable(float3, shading_normal,   attribute shading_normal, ); 
+rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
+rtDeclareVariable(float3, shading_normal,   attribute shading_normal, );
 
 rtDeclareVariable(PerRayData_pathtrace, current_prd, rtPayload, );
 
@@ -177,8 +177,9 @@ RT_PROGRAM void diffuse()
   float3 hitpoint = ray.origin + t_hit * ray.direction;
   current_prd.origin = hitpoint;
 
-  float z1=rnd(current_prd.seed);
-  float z2=rnd(current_prd.seed);
+	// specify distribution of outgoing rays
+  float z1=0.25 + rnd(current_prd.seed) / 2;
+  float z2=0.25 + rnd(current_prd.seed) / 2;
   float3 p;
   cosine_sample_hemisphere(z1, z2, p);
   float3 v1, v2;
@@ -193,33 +194,45 @@ RT_PROGRAM void diffuse()
   unsigned int num_lights = lights.size();
   float3 result = make_float3(0.0f);
 
-  for(int i = 0; i < num_lights; ++i) {
-    ParallelogramLight light = lights[i];
-    float z1 = rnd(current_prd.seed);
-    float z2 = rnd(current_prd.seed);
-    float3 light_pos = light.corner + light.v1 * z1 + light.v2 * z2;
+  //for(int i = 0; i < num_lights; ++i) {
+  //  ParallelogramLight light = lights[i];
+  //  float z1 = rnd(current_prd.seed);
+  //  float z2 = rnd(current_prd.seed);
+  //  float3 light_pos = light.corner + light.v1 * z1 + light.v2 * z2;
 
-    float Ldist = length(light_pos - hitpoint);
-    float3 L = normalize(light_pos - hitpoint);
-    float nDl = dot( ffnormal, L );
-    float LnDl = dot( light.normal, L );
-    float A = length(cross(light.v1, light.v2));
+  //  float Ldist = length(light_pos - hitpoint);
+  //  float3 L = normalize(light_pos - hitpoint);
+ //  float nDl = dot( ffnormal, L );
+ //   float LnDl = dot( light.normal, L );
+  //  float A = length(cross(light.v1, light.v2));
 
     // cast shadow ray
-    if ( nDl > 0.0f && LnDl > 0.0f ) {
-      PerRayData_pathtrace_shadow shadow_prd;
-      shadow_prd.inShadow = false;
-      Ray shadow_ray = make_Ray( hitpoint, L, pathtrace_shadow_ray_type, scene_epsilon, Ldist );
-      rtTrace(top_object, shadow_ray, shadow_prd);
+  //  if ( nDl > 0.0f && LnDl > 0.0f ) {
+  //    PerRayData_pathtrace_shadow shadow_prd;
+  //    shadow_prd.inShadow = false;
+  //    Ray shadow_ray = make_Ray( hitpoint, L, pathtrace_shadow_ray_type, scene_epsilon, Ldist );
+  //    rtTrace(top_object, shadow_ray, shadow_prd);
 
-      if(!shadow_prd.inShadow){
-        float weight=nDl * LnDl * A / (M_PIf*Ldist*Ldist);
-        result += light.emission * weight;
-      }
-    }
-  }
+  //    if(!shadow_prd.inShadow){
+  //      float weight=nDl * LnDl * A / (M_PIf*Ldist*Ldist);
+  //      result += light.emission * weight;
+   //   }
+   // }
+  //}
 
   current_prd.radiance = result;
+}
+
+RT_PROGRAM void diffuse2()
+{
+
+  current_prd.attenuation = make_float3(1.0f, 0.0f, 0.0f); // use the diffuse_color as the diffuse response
+  current_prd.countEmitted = false;
+
+  float3 result = make_float3(1.0f, 0.0f, 0.0f);
+
+  current_prd.radiance = result;
+  current_prd.done = true;
 }
 
 rtDeclareVariable(float3,        glass_color, , );
@@ -265,19 +278,39 @@ RT_PROGRAM void exception()
   output_buffer[launch_index] = make_float4(bad_color, 0.0f);
 }
 
-
 //-----------------------------------------------------------------------------
 //
-//  Miss program
+//  Miss programs
 //
 //-----------------------------------------------------------------------------
+//RT_PROGRAM void miss()
+//{
+//  current_prd.radiance = bg_color;
+//  current_prd.done = true;
+//}
 
+rtTextureSampler<float4, 2> envmap;
 RT_PROGRAM void miss()
+{
+  float theta = atan2f( ray.direction.x, ray.direction.z );
+  float phi   = M_PIf * 0.5f -  acosf( ray.direction.y );
+  float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
+  float v     = 0.5f * ( 1.0f + sin(phi) );
+  float3 result = 20.0f * powf(make_float3(tex2D(envmap, u, v)), 1.8f);
+
+  current_prd.radiance = result;
+  current_prd.done = true;
+
+  //HitRecord& rec = rtpass_output_buffer[launch_index];
+  //rec.flags = 0u;
+  //rec.attenuated_Kd = hit_prd.attenuation * result;
+}
+
+RT_PROGRAM void miss2()
 {
   current_prd.radiance = bg_color;
   current_prd.done = true;
 }
-
 
 rtDeclareVariable(PerRayData_pathtrace_shadow, current_prd_shadow, rtPayload, );
 

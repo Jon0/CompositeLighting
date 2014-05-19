@@ -35,12 +35,16 @@
 #include <PPMLoader.h>
 #include <sampleConfig.h>
 
+#include <ImageLoader.h>
+
 #include "random.h"
 #include "path_tracer.h"
 #include "helpers.h"
 
 using namespace optix;
 
+int sceneType = 2;
+bool outline = false;
 
 //-----------------------------------------------------------------------------
 //
@@ -119,10 +123,14 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
 
 
   // Set up camera
-  camera_data = InitialCameraData( make_float3( 278.0f, 273.0f, -800.0f ), // eye
-                                   make_float3( 278.0f, 273.0f, 0.0f ),    // lookat
-                                   make_float3( 0.0f, 1.0f,  0.0f ),       // up
-                                   35.0f );                                // vfov
+//  camera_data = InitialCameraData( make_float3( 278.0f, 273.0f, -800.0f ), // eye
+//                                   make_float3( 278.0f, 273.0f, 0.0f ),    // lookat
+//                                   make_float3( 0.0f, 1.0f,  0.0f ),       // up
+//                                   35.0f );                                // vfov
+    camera_data = InitialCameraData( make_float3( 145.816f, 429.417f, -773.365f ), // eye
+                                     make_float3( 277.997f, 272.998f, 0.000309646f ),    // lookat
+                                     make_float3( -0.0549143f, 0.976809f, 0.206951f ),       // up
+                                     35.0f );                                // vfov
 
   // Declare these so validation will pass
   m_context["eye"]->setFloat( make_float3( 0.0f, 0.0f, 0.0f ) );
@@ -140,7 +148,14 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
   m_context->setRayGenerationProgram( 0, ray_gen_program );
   Program exception_program = m_context->createProgramFromPTXFile( ptx_path, "exception" );
   m_context->setExceptionProgram( 0, exception_program );
-  m_context->setMissProgram( 0, m_context->createProgramFromPTXFile( ptx_path, "miss" ) );
+
+
+  if ( outline ) {
+	  m_context->setMissProgram( 0, m_context->createProgramFromPTXFile( ptx_path, "miss2" ) );
+  }
+  else {
+	  m_context->setMissProgram( 0, m_context->createProgramFromPTXFile( ptx_path, "miss" ) );
+  }
 
   m_context["frame_number"]->setUint(1);
 
@@ -148,8 +163,11 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
   m_sampling_strategy = 0;
   m_context["sampling_stategy"]->setInt(m_sampling_strategy);
 
-  // Create scene geometry
+  std::string full_path = std::string( sutilSamplesDir() ) + "/data/outside.ppm"; // ; //"/data/CedarCity.hdr"
+  const float3 default_color = make_float3( 0.8f, 0.88f, 0.97f );
+  m_context["envmap"]->setTextureSampler( loadTexture( m_context, full_path, default_color) );
 
+  // Create scene geometry
   createGeometry();
 
   // Finalize
@@ -273,16 +291,29 @@ void PathTracerScene::createGeometry()
   memcpy( light_buffer->map(), &light, sizeof( light ) );
   light_buffer->unmap();
   m_context["lights"]->setBuffer( light_buffer );
+
   // Set up material
   Material diffuse = m_context->createMaterial();
-  Program diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse" );
-  Program diffuse_ah = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "shadow" );
-  diffuse->setClosestHitProgram( 0, diffuse_ch );
-  diffuse->setAnyHitProgram( 1, diffuse_ah );
 
-  Material diffuse_light = m_context->createMaterial();
-  Program diffuse_em = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuseEmitter" );
-  diffuse_light->setClosestHitProgram( 0, diffuse_em );
+  if ( outline ) {
+	  Program diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse2" );
+	  Program diffuse_ah = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "shadow" );
+	  diffuse->setClosestHitProgram( 0, diffuse_ch );
+	  diffuse->setAnyHitProgram( 1, diffuse_ah );
+
+  } else {
+	  Program diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse" );
+	  Program diffuse_ah = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "shadow" );
+	  diffuse->setClosestHitProgram( 0, diffuse_ch );
+	  diffuse->setAnyHitProgram( 1, diffuse_ah );
+  }
+
+
+
+
+  //Material diffuse_light = m_context->createMaterial();
+  //Program diffuse_em = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuseEmitter" );
+  //diffuse_light->setClosestHitProgram( 0, diffuse_em );
 
   // Set up parallelogram programs
   std::string ptx_path = ptxpath( "path_tracer", "parallelogram.cu" );
@@ -298,56 +329,60 @@ void PathTracerScene::createGeometry()
   const float3 light_em = make_float3( 15.0f, 15.0f, 5.0f );
 
   // Floor
-  gis.push_back( createParallelogram( make_float3( 0.0f, 0.0f, 0.0f ),
-                                      make_float3( 0.0f, 0.0f, 559.2f ),
-                                      make_float3( 556.0f, 0.0f, 0.0f ) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  if (sceneType > 0) {
+		gis.push_back(
+				createParallelogram(make_float3(0.0f, 0.0f, 0.0f),
+						make_float3(0.0f, 0.0f, 559.2f),
+						make_float3(556.0f, 0.0f, 0.0f)));
+		setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  }
 
   // Ceiling
-  gis.push_back( createParallelogram( make_float3( 0.0f, 548.8f, 0.0f ),
-                                      make_float3( 556.0f, 0.0f, 0.0f ),
-                                      make_float3( 0.0f, 0.0f, 559.2f ) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
-
-  // Back wall
-  gis.push_back( createParallelogram( make_float3( 0.0f, 0.0f, 559.2f),
-                                      make_float3( 0.0f, 548.8f, 0.0f),
-                                      make_float3( 556.0f, 0.0f, 0.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
-
-  // Right wall
-  gis.push_back( createParallelogram( make_float3( 0.0f, 0.0f, 0.0f ),
-                                      make_float3( 0.0f, 548.8f, 0.0f ),
-                                      make_float3( 0.0f, 0.0f, 559.2f ) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", green);
-
-  // Left wall
-  gis.push_back( createParallelogram( make_float3( 556.0f, 0.0f, 0.0f ),
-                                      make_float3( 0.0f, 0.0f, 559.2f ),
-                                      make_float3( 0.0f, 548.8f, 0.0f ) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", red);
+//  gis.push_back( createParallelogram( make_float3( 0.0f, 548.8f, 0.0f ),
+//                                      make_float3( 556.0f, 0.0f, 0.0f ),
+//                                      make_float3( 0.0f, 0.0f, 559.2f ) ) );
+//  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+//
+//  // Back wall
+//  gis.push_back( createParallelogram( make_float3( 0.0f, 0.0f, 559.2f),
+//                                      make_float3( 0.0f, 548.8f, 0.0f),
+//                                      make_float3( 556.0f, 0.0f, 0.0f) ) );
+//  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+//
+//  // Right wall
+//  gis.push_back( createParallelogram( make_float3( 0.0f, 0.0f, 0.0f ),
+//                                      make_float3( 0.0f, 548.8f, 0.0f ),
+//                                      make_float3( 0.0f, 0.0f, 559.2f ) ) );
+//  setMaterial(gis.back(), diffuse, "diffuse_color", green);
+//
+//  // Left wall
+//  gis.push_back( createParallelogram( make_float3( 556.0f, 0.0f, 0.0f ),
+//                                      make_float3( 0.0f, 0.0f, 559.2f ),
+//                                      make_float3( 0.0f, 548.8f, 0.0f ) ) );
+//  setMaterial(gis.back(), diffuse, "diffuse_color", red);
 
   // Short block
+  if (sceneType > 1) {
   gis.push_back( createParallelogram( make_float3( 130.0f, 165.0f, 65.0f),
                                       make_float3( -48.0f, 0.0f, 160.0f),
                                       make_float3( 160.0f, 0.0f, 49.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", green);
   gis.push_back( createParallelogram( make_float3( 290.0f, 0.0f, 114.0f),
                                       make_float3( 0.0f, 165.0f, 0.0f),
                                       make_float3( -50.0f, 0.0f, 158.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", green);
   gis.push_back( createParallelogram( make_float3( 130.0f, 0.0f, 65.0f),
                                       make_float3( 0.0f, 165.0f, 0.0f),
                                       make_float3( 160.0f, 0.0f, 49.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", green);
   gis.push_back( createParallelogram( make_float3( 82.0f, 0.0f, 225.0f),
                                       make_float3( 0.0f, 165.0f, 0.0f),
                                       make_float3( 48.0f, 0.0f, -160.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", green);
   gis.push_back( createParallelogram( make_float3( 240.0f, 0.0f, 272.0f),
                                       make_float3( 0.0f, 165.0f, 0.0f),
                                       make_float3( -158.0f, 0.0f, -47.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", green);
 
   // Tall block
   gis.push_back( createParallelogram( make_float3( 423.0f, 330.0f, 247.0f),
@@ -370,6 +405,7 @@ void PathTracerScene::createGeometry()
                                       make_float3( 0.0f, 330.0f, 0.0f),
                                       make_float3( 158.0f, 0.0f, -49.0f) ) );
   setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  }
 
   // Create shadow group (no light)
   GeometryGroup shadow_group = m_context->createGeometryGroup(gis.begin(), gis.end());
@@ -377,10 +413,10 @@ void PathTracerScene::createGeometry()
   m_context["top_shadower"]->set( shadow_group );
 
   // Light
-  gis.push_back( createParallelogram( make_float3( 343.0f, 548.6f, 227.0f),
-                                      make_float3( -130.0f, 0.0f, 0.0f),
-                                      make_float3( 0.0f, 0.0f, 105.0f) ) );
-  setMaterial(gis.back(), diffuse_light, "emission_color", light_em);
+//  gis.push_back( createParallelogram( make_float3( 343.0f, 548.6f, 227.0f),
+//                                      make_float3( -130.0f, 0.0f, 0.0f),
+//                                      make_float3( 0.0f, 0.0f, 105.0f) ) );
+//  setMaterial(gis.back(), diffuse_light, "emission_color", light_em);
 
   // Create geometry group
   GeometryGroup geometry_group = m_context->createGeometryGroup(gis.begin(), gis.end());
@@ -435,15 +471,23 @@ int main( int argc, char** argv )
   // Process command line options
   unsigned int sqrt_num_samples = 2u;
 
-  unsigned int width = 512u, height = 512u;
-  float timeout = 10.0f;
+  unsigned int width = 900u, height = 600u;
+  float timeout = 0.0f;
 
   for ( int i = 1; i < argc; ++i ) {
     std::string arg( argv[i] );
     if ( arg == "--sqrt_num_samples" || arg == "-n" ) {
       if ( i == argc-1 ) printUsageAndExit( argv[0] );
       sqrt_num_samples = atoi( argv[++i] );
-    } else if ( arg == "--timeout" || arg == "-t" ) {
+    } else if ( arg == "-g" ) {
+      if ( i == argc-1 ) printUsageAndExit( argv[0] );
+      sceneType = atoi( argv[++i] );
+      std::cout << "scene type = " << sceneType << std::endl;
+    }
+    else if ( arg == "-o" ) {
+    	outline = true;
+    }
+    else if ( arg == "--timeout" || arg == "-t" ) {
       if(++i < argc) {
         timeout = static_cast<float>(atof(argv[i]));
       } else {
@@ -458,7 +502,7 @@ int main( int argc, char** argv )
     }
   }
 
-  if( !GLUTDisplay::isBenchmark() ) printUsageAndExit( argv[0], false );
+  //if( !GLUTDisplay::isBenchmark() ) printUsageAndExit( argv[0], false );
 
   try {
     PathTracerScene scene;
@@ -466,7 +510,7 @@ int main( int argc, char** argv )
     scene.setDimensions( width, height );
     GLUTDisplay::setProgressiveDrawingTimeout(timeout);
     GLUTDisplay::setUseSRGB(true);
-    GLUTDisplay::run( "Cornell Box Scene", &scene, GLUTDisplay::CDProgressive );
+    GLUTDisplay::run( "Lighting Test", &scene, GLUTDisplay::CDProgressive );
   } catch( Exception& e ){
     sutilReportError( e.getErrorString().c_str() );
     exit(1);
