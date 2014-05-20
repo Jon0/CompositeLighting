@@ -28,7 +28,7 @@
 using namespace optix;
 
 //-----------------------------------------------------------------------------
-//  
+//
 //  PPMLoader class definition
 //
 //-----------------------------------------------------------------------------
@@ -37,7 +37,7 @@ PPMLoader::PPMLoader( const std::string& filename, const bool vflip )
   : m_nx( 0u ), m_ny( 0u ), m_max_val( 0u ), m_raster( 0 ), m_is_ascii(false)
 {
   if ( filename.empty() ) return;
-  
+
   std::string extension = filename.substr( filename.find_last_of( '.' ) );
   if (extension != ".ppm" ) {
     std::cerr << "PPMLoader( '" << filename << "' ) non-ppm file extension given '" << extension << "'" << std::endl;
@@ -155,10 +155,10 @@ void PPMLoader::getLine( std::ifstream& file_in, std::string& s )
   }
 }
 
-  
+
 //-----------------------------------------------------------------------------
-//  
-//  Utility functions 
+//
+//  Utility functions
 //
 //-----------------------------------------------------------------------------
 
@@ -245,10 +245,10 @@ optix::TextureSampler PPMLoader::loadTexture( optix::Context context,
   return sampler;
 }
 
-  
+
 //-----------------------------------------------------------------------------
-//  
-//  Utility functions 
+//
+//  Utility functions
 //
 //-----------------------------------------------------------------------------
 

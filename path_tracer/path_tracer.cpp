@@ -127,10 +127,10 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
 //                                   make_float3( 278.0f, 273.0f, 0.0f ),    // lookat
 //                                   make_float3( 0.0f, 1.0f,  0.0f ),       // up
 //                                   35.0f );                                // vfov
-    camera_data = InitialCameraData( make_float3( 145.816f, 429.417f, -773.365f ), // eye
-                                     make_float3( 277.997f, 272.998f, 0.000309646f ),    // lookat
-                                     make_float3( -0.0549143f, 0.976809f, 0.206951f ),       // up
-                                     35.0f );                                // vfov
+    camera_data = InitialCameraData( make_float3( -1609.68f, 709.366f, 268.533f ), // eye
+                                     make_float3( 329.381f, 397.467f, 471.722f ),    // lookat
+                                     make_float3( 0.156682f, 0.987436f, 0.020513f ),       // up
+                                     43.3469f );                                // vfov
 
   // Declare these so validation will pass
   m_context["eye"]->setFloat( make_float3( 0.0f, 0.0f, 0.0f ) );
@@ -325,16 +325,17 @@ void PathTracerScene::createGeometry()
 
   const float3 white = make_float3( 0.8f, 0.8f, 0.8f );
   const float3 green = make_float3( 0.05f, 0.8f, 0.05f );
-  const float3 red   = make_float3( 0.8f, 0.05f, 0.05f );
+  const float3 orange = make_float3( 0.8f, 0.4f, 0.05f );
+  const float3 grey   = make_float3( 0.2f, 0.2f, 0.2f );
   const float3 light_em = make_float3( 15.0f, 15.0f, 5.0f );
 
   // Floor
-  if (sceneType > 0) {
+  if (sceneType == 1 || sceneType == 2) {
 		gis.push_back(
-				createParallelogram(make_float3(0.0f, 0.0f, 0.0f),
-						make_float3(0.0f, 0.0f, 559.2f),
-						make_float3(556.0f, 0.0f, 0.0f)));
-		setMaterial(gis.back(), diffuse, "diffuse_color", white);
+				createParallelogram(make_float3(-600.0f, 0.0f, -600.0f),
+						make_float3(0.0f, 0.0f, 1559.2f),
+						make_float3(1556.0f, 0.0f, 0.0f)));
+		setMaterial(gis.back(), diffuse, "diffuse_color", grey);
   }
 
   // Ceiling
@@ -388,23 +389,23 @@ void PathTracerScene::createGeometry()
   gis.push_back( createParallelogram( make_float3( 423.0f, 330.0f, 247.0f),
                                       make_float3( -158.0f, 0.0f, 49.0f),
                                       make_float3( 49.0f, 0.0f, 159.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
   gis.push_back( createParallelogram( make_float3( 423.0f, 0.0f, 247.0f),
                                       make_float3( 0.0f, 330.0f, 0.0f),
                                       make_float3( 49.0f, 0.0f, 159.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
   gis.push_back( createParallelogram( make_float3( 472.0f, 0.0f, 406.0f),
                                       make_float3( 0.0f, 330.0f, 0.0f),
                                       make_float3( -158.0f, 0.0f, 50.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
   gis.push_back( createParallelogram( make_float3( 314.0f, 0.0f, 456.0f),
                                       make_float3( 0.0f, 330.0f, 0.0f),
                                       make_float3( -49.0f, 0.0f, -160.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
   gis.push_back( createParallelogram( make_float3( 265.0f, 0.0f, 296.0f),
                                       make_float3( 0.0f, 330.0f, 0.0f),
                                       make_float3( 158.0f, 0.0f, -49.0f) ) );
-  setMaterial(gis.back(), diffuse, "diffuse_color", white);
+  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
   }
 
   // Create shadow group (no light)
@@ -471,7 +472,7 @@ int main( int argc, char** argv )
   // Process command line options
   unsigned int sqrt_num_samples = 2u;
 
-  unsigned int width = 900u, height = 600u;
+  unsigned int width = 1600u, height = 900u;
   float timeout = 0.0f;
 
   for ( int i = 1; i < argc; ++i ) {

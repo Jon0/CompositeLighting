@@ -177,9 +177,11 @@ RT_PROGRAM void diffuse()
   float3 hitpoint = ray.origin + t_hit * ray.direction;
   current_prd.origin = hitpoint;
 
-	// specify distribution of outgoing rays
-  float z1=0.25 + rnd(current_prd.seed) / 2;
-  float z2=0.25 + rnd(current_prd.seed) / 2;
+	// normal distribution of outgoing rays with variance of 0.5
+  //float r = sqrtf(0.5 * -2 * logf ( rnd(current_prd.seed) ) ) * cosf(2*M_PIf*rnd(current_prd.seed));
+
+  float z1= rnd(current_prd.seed); // 0.5 + r/2;
+  float z2= rnd(current_prd.seed);
   float3 p;
   cosine_sample_hemisphere(z1, z2, p);
   float3 v1, v2;
@@ -296,7 +298,7 @@ RT_PROGRAM void miss()
   float phi   = M_PIf * 0.5f -  acosf( ray.direction.y );
   float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
   float v     = 0.5f * ( 1.0f + sin(phi) );
-  float3 result = 20.0f * powf(make_float3(tex2D(envmap, u, v)), 1.8f);
+  float3 result = 200.0f * powf(make_float3(tex2D(envmap, u, v)), 2.5f);
 
   current_prd.radiance = result;
   current_prd.done = true;
