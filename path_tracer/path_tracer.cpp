@@ -127,9 +127,9 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
 //                                   make_float3( 278.0f, 273.0f, 0.0f ),    // lookat
 //                                   make_float3( 0.0f, 1.0f,  0.0f ),       // up
 //                                   35.0f );                                // vfov
-    camera_data = InitialCameraData( make_float3( -1609.68f, 709.366f, 268.533f ), // eye
-                                     make_float3( 329.381f, 397.467f, 471.722f ),    // lookat
-                                     make_float3( 0.156682f, 0.987436f, 0.020513f ),       // up
+    camera_data = InitialCameraData( make_float3( 1272.55f, 717.138f, -1107.04f ), // eye
+                                     make_float3( 190.117f, 83.4595f, 418.087f ),    // lookat
+                                     make_float3( -0.205594f, 0.946826f, 0.247492f ),       // up
                                      43.3469f );                                // vfov
 
   // Declare these so validation will pass
@@ -470,7 +470,7 @@ int main( int argc, char** argv )
   GLUTDisplay::init( argc, argv );
 
   // Process command line options
-  unsigned int sqrt_num_samples = 2u;
+  unsigned int sqrt_num_samples = 8u;
 
   unsigned int width = 1600u, height = 900u;
   float timeout = 0.0f;
