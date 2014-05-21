@@ -72,41 +72,24 @@ public:
 
 		for (int i = 0; i < size; ++i) {
 
-			int addr = chan*i;
+			int base_addr = chan*i;
+			float geomWeight = geomOutline[base_addr] / 256.0f;
+			float localWeight = localOutline[base_addr] / 256.0f;
+			float nongeomWeight = 1.0f - geomWeight;
+			float nonlocalWeight = 1.0f - localWeight;
 
-			float geomWeight = geomOutline[addr] / 255.0f;
-			float localWeight = localOutline[addr] / 255.0f;
-
-
-			if (geomWeight > 0) {
-				output[addr+0] = geomWeight * geom[addr+0];
-				output[addr+1] = geomWeight * geom[addr+1];
-				output[addr+2] = geomWeight * geom[addr+2];
-			}
-			else if (localWeight == 0) {
-				output[addr+0] = scene[addr+0];
-				output[addr+1] = scene[addr+1];
-				output[addr+2] = scene[addr+2];
-			}
-			else {
+			for (int addr = base_addr; addr < base_addr + 3; ++addr) {
+				unsigned int out = 0;
+				out += geomWeight * geom[addr];
+				out += nonlocalWeight * nongeomWeight * scene[addr];
 
 				// local * m = geom
-				float m0 = (float)geom[addr+0] / (float)local[addr+0];
-				float m1 = (float)geom[addr+1] / (float)local[addr+1];
-				float m2 = (float)geom[addr+2] / (float)local[addr+2];
+				float m0 = (float)geom[addr] / (float)local[addr];
+				out += localWeight * nongeomWeight * scene[addr] * m0;
 
-
-				// local + d = geom
-				int d0 = geom[addr+0] - local[addr+0];
-				int d1 = geom[addr+1] - local[addr+1];
-				int d2 = geom[addr+2] - local[addr+2];
-
-				output[addr+0] = scene[addr+0] * m0; //256-(unsigned char)(d0); // scene[addr+0] +
-				output[addr+1] = scene[addr+1] * m1; //256-(unsigned char)(d1);
-				output[addr+2] = scene[addr+2] * m2; //256-(unsigned char)(d2);
+				if (out > 255) out = 255;
+				output[addr] = out;
 			}
-
-
 		}
 
 
