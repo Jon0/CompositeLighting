@@ -61,6 +61,9 @@ rtDeclareVariable(unsigned int,  sqrt_num_samples, , );
 rtBuffer<float4, 2>              output_buffer;
 rtBuffer<ParallelogramLight>     lights;
 
+// Lighting
+rtDeclareVariable(float,        lightmap_y_rot, , );
+
 rtDeclareVariable(unsigned int,  pathtrace_ray_type, , );
 rtDeclareVariable(unsigned int,  pathtrace_shadow_ray_type, , );
 rtDeclareVariable(unsigned int,  rr_begin_depth, , );
@@ -298,8 +301,9 @@ RT_PROGRAM void miss()
   float phi   = M_PIf * 0.5f -  acosf( ray.direction.y );
   float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
   float v     = 0.5f * ( 1.0f + sin(phi) );
-  float3 emap = make_float3(tex2D(envmap, u, v));
-  float3 result = 5.0f * (emap + 180.0f * powf(emap, 8.0f));
+  float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
+  float3 result = emap;
+  //float3 result = 5.0f * (emap + 180.0f * powf(emap, 8.0f));
 
   current_prd.radiance = result;
   current_prd.done = true;

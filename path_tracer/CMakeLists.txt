@@ -27,17 +27,22 @@ if(GLUT_FOUND AND OPENGL_FOUND)
   OPTIX_add_sample_executable( path_tracer
     path_tracer.cpp
 
+    exr/imageio.cpp
+    exr/imageio.h
+
     # These files are common among multiple samples
     helpers.h
     parallelogram.cu
     path_tracer.cu
     path_tracer.h
     random.h
-    )
+
+    ${OPENEXR_INCLUDE_PATHS}
+  )
 
 else()
   # GLUT or OpenGL not found
-  message("Disabling path_tracer, which requires glut and opengl.")
+  message("path_tracer requires glut and opengl.")
 endif()
 
 

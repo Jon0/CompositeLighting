@@ -41,6 +41,10 @@
 #include "path_tracer.h"
 #include "helpers.h"
 
+// EXR
+#include <ImfArray.h>
+#include "exr/imageio.h"
+
 using namespace optix;
 
 int sceneType = 2;
@@ -52,6 +56,81 @@ bool outline = false;
 //
 //-----------------------------------------------------------------------------
 
+optix::TextureSampler loadExrTexture( const char fileName[],
+											optix::Context context,
+                                            const float3& default_color)
+{
+	std::cout << "Reading " << fileName << std::endl;
+	Imf::Array2D<Imf::Rgba> pixels;
+	int width;
+	int height;
+	imageio::readRgba1(fileName, pixels, width, height);
+	std::cout << "image dimensions " << width << "x" << height << std::endl;
+
+  // Create tex sampler and populate with default values
+  optix::TextureSampler sampler = context->createTextureSampler();
+  sampler->setWrapMode( 0, RT_WRAP_REPEAT );
+  sampler->setWrapMode( 1, RT_WRAP_REPEAT );
+  sampler->setWrapMode( 2, RT_WRAP_REPEAT );
+  sampler->setIndexingMode( RT_TEXTURE_INDEX_NORMALIZED_COORDINATES );
+  sampler->setReadMode( RT_TEXTURE_READ_NORMALIZED_FLOAT );
+  sampler->setMaxAnisotropy( 1.0f );
+  sampler->setMipLevelCount( 1u );
+  sampler->setArraySize( 1u );
+
+//  if ( failed() ) {
+//
+//    // Create buffer with single texel set to default_color
+//    optix::Buffer buffer = context->createBuffer( RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, 1u, 1u );
+//    unsigned char* buffer_data = static_cast<unsigned char*>( buffer->map() );
+//    buffer_data[0] = (unsigned char)clamp((int)(default_color.x * 255.0f), 0, 255);
+//    buffer_data[1] = (unsigned char)clamp((int)(default_color.y * 255.0f), 0, 255);
+//    buffer_data[2] = (unsigned char)clamp((int)(default_color.z * 255.0f), 0, 255);
+//    buffer_data[3] = 255;
+//    buffer->unmap();
+//
+//    sampler->setBuffer( 0u, 0u, buffer );
+//    // Although it would be possible to use nearest filtering here, we chose linear
+//    // to be consistent with the textures that have been loaded from a file. This
+//    // allows OptiX to perform some optimizations.
+//    sampler->setFilteringModes( RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE );
+//
+//    return sampler;
+//  }
+
+  const unsigned int nx = width;
+  const unsigned int ny = height;
+
+  // Create buffer and populate with PPM data
+  optix::Buffer buffer = context->createBuffer( RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, nx, ny );
+  float* buffer_data = static_cast<float *>( buffer->map() );
+
+  for ( unsigned int i = 0; i < nx; ++i ) {
+    for ( unsigned int j = 0; j < ny; ++j ) {
+
+      unsigned int ppm_index = ( (ny-j-1)*nx + (nx-i-1) );
+      unsigned int buf_index = ( j*nx + i )*4;
+
+      Imf::Rgba pix = pixels[0][ppm_index];
+
+      //std::cout << pix << std::endl;
+
+      buffer_data[ buf_index + 0 ] = pix.r;
+      buffer_data[ buf_index + 1 ] = pix.g;
+      buffer_data[ buf_index + 2 ] = pix.b;
+      buffer_data[ buf_index + 3 ] = 1.0f;
+    }
+  }
+
+  buffer->unmap();
+
+  sampler->setBuffer( 0u, 0u, buffer );
+  sampler->setFilteringModes( RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE );
+
+  return sampler;
+}
+
+
 class PathTracerScene: public SampleScene
 {
 public:
@@ -62,7 +141,10 @@ public:
   , m_sqrt_num_samples( 0u )
   , m_width(512u)
   , m_height(512u)
-  {}
+  {
+	  lightmap_path = "/data/outside.ppm";
+	  lightmap_y_rot = 1.7f;
+  }
 
   virtual void   initScene( InitialCameraData& camera_data );
   virtual void   trace( const RayGenCameraData& camera_data );
@@ -99,6 +181,10 @@ private:
   unsigned int   m_height;
   unsigned int   m_frame;
   unsigned int   m_sampling_strategy;
+
+  float lightmap_y_rot;
+
+  string lightmap_path;
 };
 
 
@@ -118,7 +204,7 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
 
   // Setup output buffer
   Variable output_buffer = m_context["output_buffer"];
-  Buffer buffer = createOutputBuffer( RT_FORMAT_FLOAT4, m_width, m_height );
+  Buffer buffer = createOutputBuffer( RT_FORMAT_FLOAT4, m_width, m_height ); // RT_FORMAT_UNSIGNED_BYTE4
   output_buffer->set(buffer);
 
 
@@ -130,7 +216,7 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
     camera_data = InitialCameraData( make_float3( 1272.55f, 717.138f, -1107.04f ), // eye
                                      make_float3( 190.117f, 83.4595f, 418.087f ),    // lookat
                                      make_float3( -0.205594f, 0.946826f, 0.247492f ),       // up
-                                     43.3469f );                                // vfov
+                                     47.3788f );                                // vfov
 
   // Declare these so validation will pass
   m_context["eye"]->setFloat( make_float3( 0.0f, 0.0f, 0.0f ) );
@@ -141,6 +227,8 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
   m_context["sqrt_num_samples"]->setUint( m_sqrt_num_samples );
   m_context["bad_color"]->setFloat( 0.0f, 1.0f, 0.0f );
   m_context["bg_color"]->setFloat( make_float3(0.0f) );
+
+  m_context["lightmap_y_rot"]->setFloat( lightmap_y_rot );
 
   // Setup programs
   std::string ptx_path = ptxpath( "path_tracer", "path_tracer.cu" );
@@ -163,9 +251,11 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
   m_sampling_strategy = 0;
   m_context["sampling_stategy"]->setInt(m_sampling_strategy);
 
-  std::string full_path = std::string( sutilSamplesDir() ) + "/data/outside.ppm"; // ; //"/data/CedarCity.hdr"
+  std::string full_path = std::string( sutilSamplesDir() ) + lightmap_path; // ; //"/data/CedarCity.hdr"
   const float3 default_color = make_float3( 0.8f, 0.88f, 0.97f );
-  m_context["envmap"]->setTextureSampler( loadTexture( m_context, full_path, default_color) );
+
+  //loadTexture( m_context, full_path, default_color)
+  m_context["envmap"]->setTextureSampler( loadExrTexture( "vuw_quad_hdr_5024.exr", m_context, default_color) );
 
   // Create scene geometry
   createGeometry();
@@ -177,6 +267,21 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
 
 bool PathTracerScene::keyPressed( unsigned char key, int x, int y )
 {
+	std::cout << lightmap_y_rot << std::endl;
+  if (key == 'j') {
+	  m_frame = 1;
+	  m_context["frame_number"]->setUint( m_frame++ );
+	  lightmap_y_rot += 0.01;
+	  m_context["lightmap_y_rot"]->setFloat( lightmap_y_rot );
+	  return true;
+  }
+  else if (key == 'k') {
+	  m_frame = 1;
+	  m_context["frame_number"]->setUint( m_frame++ );
+	  lightmap_y_rot -= 0.01;
+	  m_context["lightmap_y_rot"]->setFloat( lightmap_y_rot );
+	  return true;
+  }
   return false;
 }
 
@@ -470,7 +575,7 @@ int main( int argc, char** argv )
   GLUTDisplay::init( argc, argv );
 
   // Process command line options
-  unsigned int sqrt_num_samples = 8u;
+  unsigned int sqrt_num_samples = 1u;
 
   unsigned int width = 1600u, height = 900u;
   float timeout = 0.0f;
@@ -503,19 +608,35 @@ int main( int argc, char** argv )
     }
   }
 
-  //if( !GLUTDisplay::isBenchmark() ) printUsageAndExit( argv[0], false );
+  string desc = "";
+  if (sceneType == 0) {
+	  desc = "scene";
+  }
+  else if (sceneType == 1) {
+	  desc = "local";
+  }
+  else if (sceneType >= 2) {
+	  desc = "geom";
+  }
 
+  if (outline) {
+	  desc += "Out";
+  }
+
+
+  //if( !GLUTDisplay::isBenchmark() ) printUsageAndExit( argv[0], false );
   try {
     PathTracerScene scene;
     scene.setNumSamples( sqrt_num_samples );
     scene.setDimensions( width, height );
     GLUTDisplay::setProgressiveDrawingTimeout(timeout);
-    GLUTDisplay::setUseSRGB(true);
-    GLUTDisplay::run( "Lighting Test", &scene, GLUTDisplay::CDProgressive );
+    GLUTDisplay::setUseSRGB(false);
+    GLUTDisplay::run( desc, &scene, GLUTDisplay::CDProgressive );
   } catch( Exception& e ){
     sutilReportError( e.getErrorString().c_str() );
     exit(1);
   }
+
 
   return 0;
 }

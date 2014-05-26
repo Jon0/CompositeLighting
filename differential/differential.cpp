@@ -78,7 +78,7 @@ public:
 			float nongeomWeight = 1.0f - geomWeight;
 			float nonlocalWeight = 1.0f - localWeight;
 
-			for (int addr = base_addr; addr < base_addr + 3; ++addr) {
+			for (int addr = base_addr; addr < base_addr + chan; ++addr) {
 				unsigned int out = 0;
 				out += geomWeight * geom[addr];
 				out += nonlocalWeight * nongeomWeight * scene[addr];

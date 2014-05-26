@@ -186,11 +186,13 @@ set(OptiX_INSTALL_DIR "${CMAKE_SOURCE_DIR}/../" CACHE PATH "Path to OptiX instal
 
 # Search for the OptiX libraries and include files.
 find_package(OptiX REQUIRED)
+find_package(OpenEXR REQUIRED)
 
 # Add the path to the OptiX headers to our include paths.
 include_directories(
   "${OptiX_INCLUDE}"
-  )
+  "${OPENEXR_INCLUDE_PATHS}"
+)
 
 # Force the perforce plugin off for the SDK.
 set(USE_PERFORCE OFF CACHE BOOL "This is forced off." FORCE)
@@ -262,7 +264,8 @@ function(OPTIX_add_sample_executable target_name)
     sutil
     optix
     ${optix_rpath}
-    )
+    ${OPENEXR_LIBRARIES}
+  )
   if(USING_GNU_CXX)
     target_link_libraries( ${target_name} m ) # Explicitly link against math library (C samples don't do that by default)
   endif()

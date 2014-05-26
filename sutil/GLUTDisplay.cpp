@@ -643,7 +643,9 @@ void GLUTDisplay::keyPressed(unsigned char key, int x, int y)
     break;
 
   case 's':
-    sutilDisplayFilePPM( "out.ppm", m_scene->getOutputBuffer()->get() );
+    //sutilDisplayFilePPM( "out.ppm", m_scene->getOutputBuffer()->get() );
+	  sutilDisplayFilePPM( ("outputs/"+m_title+".ppm").c_str(), m_scene->getOutputBuffer()->get() );
+
     break;
 
   case 'm':
