@@ -255,7 +255,7 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
   const float3 default_color = make_float3( 0.8f, 0.88f, 0.97f );
 
   //loadTexture( m_context, full_path, default_color)
-  m_context["envmap"]->setTextureSampler( loadExrTexture( "vuw_quad_hdr_5024.exr", m_context, default_color) );
+  m_context["envmap"]->setTextureSampler( loadExrTexture( "vuw_sunny_hdr_mod1_5024.exr", m_context, default_color) );
 
   // Create scene geometry
   createGeometry();
@@ -575,7 +575,7 @@ int main( int argc, char** argv )
   GLUTDisplay::init( argc, argv );
 
   // Process command line options
-  unsigned int sqrt_num_samples = 1u;
+  unsigned int sqrt_num_samples = 8u;
 
   unsigned int width = 1600u, height = 900u;
   float timeout = 0.0f;
@@ -630,7 +630,7 @@ int main( int argc, char** argv )
     scene.setNumSamples( sqrt_num_samples );
     scene.setDimensions( width, height );
     GLUTDisplay::setProgressiveDrawingTimeout(timeout);
-    GLUTDisplay::setUseSRGB(false);
+    GLUTDisplay::setUseSRGB(true);
     GLUTDisplay::run( desc, &scene, GLUTDisplay::CDProgressive );
   } catch( Exception& e ){
     sutilReportError( e.getErrorString().c_str() );

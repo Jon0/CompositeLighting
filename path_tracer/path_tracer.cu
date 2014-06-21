@@ -302,7 +302,7 @@ RT_PROGRAM void miss()
   float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
   float v     = 0.5f * ( 1.0f + sin(phi) );
   float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-  float3 result = emap;
+  float3 result = 2.0f * emap;
   //float3 result = 5.0f * (emap + 180.0f * powf(emap, 8.0f));
 
   current_prd.radiance = result;

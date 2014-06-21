@@ -156,9 +156,9 @@ displayFilePPM(const char* filename, RTbuffer buffer)
         unsigned char *dst = &pix[0] + (3*width*(height-1-j));
         unsigned char *src = ((unsigned char*)imageData) + (4*width*j);
         for(int i = 0; i < width; i++) {
-          *dst++ = *(src + 2);
-          *dst++ = *(src + 1);
-          *dst++ = *(src + 0);
+          *dst++ = (*(src + 2));
+          *dst++ = (*(src + 1));
+          *dst++ = (*(src + 0));
           src += 4;
         }
       }
@@ -364,7 +364,7 @@ displayGlutWindow(const char* window_title, RTbuffer buffer)
     return RT_ERROR_UNKNOWN;
   }
   rtBufferGetContext( buffer, &g_context );
-  
+
   if ( !g_glut_initialized ) {
     fprintf(stderr, "displayGlutWindow called before initGlut.");
     return RT_ERROR_UNKNOWN;
@@ -430,14 +430,14 @@ displayGlutWindowVBO(const char* window_title,
                      unsigned int height,
                      RTcontext context)
 {
-  
+
   // Set the global RTcontext so we can destroy it at exit
   if ( g_context != NULL ) {
     fprintf(stderr, "displayGlutWindowVBO called, while another displayGlut is active.  Not supported.");
     return RT_ERROR_UNKNOWN;
   }
   g_context = context;
-  
+
   if ( !g_glut_initialized ) {
     fprintf(stderr, "displayGlutWindowVBO called before initGlut.");
     return RT_ERROR_UNKNOWN;
@@ -480,7 +480,7 @@ extern "C"
 RTresult
 initGlut(int* argc, char** argv)
 {
-  cleanCommandLineArgs( argc, argv ) 
+  cleanCommandLineArgs( argc, argv )
   fprintf(stderr, "Glut is not configured for this build. cleanCommandLinArgs needs to be implemented\n");
   return RT_SUCCESS;
 }
