@@ -188,7 +188,7 @@ set(OptiX_INSTALL_DIR "${CMAKE_SOURCE_DIR}/../" CACHE PATH "Path to OptiX instal
 find_package(OptiX REQUIRED)
 find_package(OpenEXR REQUIRED)
 
-if( NOT OPENEXR_FOUND )
+if( OPENEXR_FOUND )
   message( FATAL_ERROR "OpenExr is required" )
 endif()
 
