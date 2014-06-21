@@ -30,7 +30,7 @@
 #include <sutil.h>
 #include <iostream>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 #include <GLUTDisplay.h>
 #include <PPMLoader.h>
 #include <sampleConfig.h>
@@ -45,6 +45,7 @@
 #include <ImfArray.h>
 #include "exr/imageio.h"
 
+using namespace std;
 using namespace optix;
 
 int sceneType = 2;
@@ -64,7 +65,7 @@ optix::TextureSampler loadExrTexture( const char fileName[],
 	Imf::Array2D<Imf::Rgba> pixels;
 	int width;
 	int height;
-	imageio::readRgba1(fileName, pixels, width, height);
+	Imf::imageio::readRgba1(fileName, pixels, width, height);
 	std::cout << "image dimensions " << width << "x" << height << std::endl;
 
   // Create tex sampler and populate with default values

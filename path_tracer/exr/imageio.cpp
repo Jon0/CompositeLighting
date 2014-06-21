@@ -19,6 +19,7 @@ Feel free to do whatever you want.
 
 // Namespaces
 using namespace Imath;
+using namespace Imf;
 using namespace std;
 
 // http://www.openexr.com/TechnicalIntroduction.pdf

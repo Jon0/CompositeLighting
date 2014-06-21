@@ -8,10 +8,11 @@ Feel free to do whatever you want.
 #pragma once
 
 // OpenEXR
+#include <ImfArray.h>
 #include <ImfInputFile.h>
 #include <ImfRgbaFile.h>
 
-using namespace Imf;
+namespace Imf {
 
 class imageio{
 public:
@@ -24,6 +25,8 @@ public:
   static void readRgba2(const char fileName[]);
   static bool ReadEXR(const char *name, float *&rgba, int &xRes, int &yRes, bool &hasAlpha);
 };
+
+}
 
 
 
