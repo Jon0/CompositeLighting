@@ -36,6 +36,8 @@ if(GLUT_FOUND AND OPENGL_FOUND)
     path_tracer.cu
     path_tracer.h
     random.h
+    triangle_mesh_iterative.cu
+    intersection_refinement.h
 
     ${OPENEXR_INCLUDE_PATHS}
   )

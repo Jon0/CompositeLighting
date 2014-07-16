@@ -59,7 +59,6 @@ rtDeclareVariable(float3,        bad_color, , );
 rtDeclareVariable(unsigned int,  frame_number, , );
 rtDeclareVariable(unsigned int,  sqrt_num_samples, , );
 rtBuffer<float4, 2>              output_buffer;
-rtBuffer<ParallelogramLight>     lights;
 
 // Lighting
 rtDeclareVariable(float,        lightmap_y_rot, , );
@@ -194,37 +193,8 @@ RT_PROGRAM void diffuse()
   current_prd.attenuation = current_prd.attenuation * diffuse_color; // use the diffuse_color as the diffuse response
   current_prd.countEmitted = false;
 
-  // Compute direct light...
-  // Or shoot one...
-  unsigned int num_lights = lights.size();
+  // Compute light...
   float3 result = make_float3(0.0f);
-
-  //for(int i = 0; i < num_lights; ++i) {
-  //  ParallelogramLight light = lights[i];
-  //  float z1 = rnd(current_prd.seed);
-  //  float z2 = rnd(current_prd.seed);
-  //  float3 light_pos = light.corner + light.v1 * z1 + light.v2 * z2;
-
-  //  float Ldist = length(light_pos - hitpoint);
-  //  float3 L = normalize(light_pos - hitpoint);
- //  float nDl = dot( ffnormal, L );
- //   float LnDl = dot( light.normal, L );
-  //  float A = length(cross(light.v1, light.v2));
-
-    // cast shadow ray
-  //  if ( nDl > 0.0f && LnDl > 0.0f ) {
-  //    PerRayData_pathtrace_shadow shadow_prd;
-  //    shadow_prd.inShadow = false;
-  //    Ray shadow_ray = make_Ray( hitpoint, L, pathtrace_shadow_ray_type, scene_epsilon, Ldist );
-  //    rtTrace(top_object, shadow_ray, shadow_prd);
-
-  //    if(!shadow_prd.inShadow){
-  //      float weight=nDl * LnDl * A / (M_PIf*Ldist*Ldist);
-  //      result += light.emission * weight;
-   //   }
-   // }
-  //}
-
   current_prd.radiance = result;
 }
 
@@ -297,6 +267,8 @@ RT_PROGRAM void exception()
 rtTextureSampler<float4, 2> envmap;
 RT_PROGRAM void miss()
 {
+
+	// sample the light map
   float theta = atan2f( ray.direction.x, ray.direction.z );
   float phi   = M_PIf * 0.5f -  acosf( ray.direction.y );
   float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
