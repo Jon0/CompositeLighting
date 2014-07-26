@@ -27,6 +27,8 @@ if(GLUT_FOUND AND OPENGL_FOUND)
   OPTIX_add_sample_executable( path_tracer
     path_tracer.cpp
 
+	scene/Scene.cpp
+	scene/Scene.h
     exr/imageio.cpp
     exr/imageio.h
 

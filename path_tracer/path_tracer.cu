@@ -76,9 +76,26 @@ rtDeclareVariable(optix::Ray, ray,          rtCurrentRay, );
 rtDeclareVariable(float,      t_hit,        rtIntersectionDistance, );
 rtDeclareVariable(uint2,      launch_index, rtLaunchIndex, );
 
-static __device__ inline float3 powf(float3 a, float exp)
-{
-  return make_float3(powf(a.x, exp), powf(a.y, exp), powf(a.z, exp));
+static __device__ inline float3 powf(float3 a, float exp) {
+	return make_float3(powf(a.x, exp), powf(a.y, exp), powf(a.z, exp));
+}
+
+static __device__ inline float toLinear(float a) {
+	if (a < 0.04045) {
+		return a / 12.92;
+	}
+	else {
+		return powf((a + 0.055) / 1.055, 2.4);
+	}
+}
+
+static __device__ inline float toSRGB(float a) {
+	if (a < 0.0031308) {
+		return a * 12.92;
+	}
+	else {
+		return 1.055*powf(a, 0.416) - 0.055;
+	}
 }
 
 // For miss program
@@ -144,19 +161,20 @@ RT_PROGRAM void pathtrace_camera()
     seed = prd.seed;
   } while (--samples_per_pixel);
 
-  float3 pixel_color = result/(sqrt_num_samples*sqrt_num_samples);
+  
+	float3 pixel_color = result/(sqrt_num_samples*sqrt_num_samples);
+	pixel_color.x = toSRGB(pixel_color.x);
+	pixel_color.y = toSRGB(pixel_color.y);
+	pixel_color.z = toSRGB(pixel_color.z);
 
-  if (frame_number > 1)
-  {
-    float a = 1.0f / (float)frame_number;
-    float b = ((float)frame_number - 1.0f) * a;
-    float3 old_color = make_float3(output_buffer[launch_index]);
-    output_buffer[launch_index] = make_float4(a * pixel_color + b * old_color, 0.0f);
-  }
-  else
-  {
-    output_buffer[launch_index] = make_float4(pixel_color, 0.0f);
-  }
+	if (frame_number > 1) {
+		float a = 1.0f / (float) frame_number;
+		float b = ((float) frame_number - 1.0f) * a;
+		float3 old_color = make_float3(output_buffer[launch_index]);
+		output_buffer[launch_index] = make_float4(a * pixel_color + b * old_color, 0.0f);
+	} else {
+		output_buffer[launch_index] = make_float4(pixel_color, 0.0f);
+	}
 }
 
 rtDeclareVariable(float3,        emission_color, , );
@@ -201,7 +219,7 @@ RT_PROGRAM void diffuse()
 RT_PROGRAM void diffuse2()
 {
 
-  current_prd.attenuation = make_float3(1.0f, 0.0f, 0.0f); // use the diffuse_color as the diffuse response
+  current_prd.attenuation = make_float3(1.0f, 0.0f, 0.0f); // red
   current_prd.countEmitted = false;
 
   float3 result = make_float3(1.0f, 0.0f, 0.0f);
@@ -274,10 +292,9 @@ RT_PROGRAM void miss()
   float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
   float v     = 0.5f * ( 1.0f + sin(phi) );
   float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-  float3 result = 2.0f * emap;
-  //float3 result = 5.0f * (emap + 180.0f * powf(emap, 8.0f));
+  emap = 5.0f * (emap + 0.40f * powf(emap, 5.0f));
 
-  current_prd.radiance = result;
+  current_prd.radiance = emap;
   current_prd.done = true;
 
   //HitRecord& rec = rtpass_output_buffer[launch_index];

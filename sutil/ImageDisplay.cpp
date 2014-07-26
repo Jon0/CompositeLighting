@@ -86,7 +86,7 @@ static RTresult SavePPM(const unsigned char *Pix, const char *fname, int wid, in
 
   ofstream OutFile(fname, ios::out | ios::binary);
   if(!OutFile.is_open()) {
-    fprintf(stderr, "Could not open file for SavePPM\n");
+    fprintf(stderr, "Could not open file %s for SavePPM\n", fname);
     return RT_ERROR_UNKNOWN;
   }
 

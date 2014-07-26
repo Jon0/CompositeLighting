@@ -93,7 +93,7 @@ public:
 		}
 
 
-		SavePPM((const unsigned char *)&output, "test.ppm", ppm1.width(), ppm1.height(), chan);
+		SavePPM((const unsigned char *)&output, "outputs/differential.ppm", ppm1.width(), ppm1.height(), chan);
 
 	}
 

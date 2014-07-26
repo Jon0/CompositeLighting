@@ -19,30 +19,20 @@
  * SUCH DAMAGES
  */
 
-//------------------------------------------------------------------------------
-//
-// path_tracer.cpp: render cornell box using path tracing.
-//
-//------------------------------------------------------------------------------
-
 #include <sutil.h>
 #include <iostream>
 #include <stdlib.h>
 #include <string>
 
-#include <optixu/optixpp_namespace.h>
-#include <optixu/optixu_math_namespace.h>
-#include <optixu/optixu_matrix_namespace.h>
-
 #include <GLUTDisplay.h>
 #include <ImageLoader.h>
-#include <ObjLoader.h>
 #include <PPMLoader.h>
 #include <sampleConfig.h>
 
 #include "random.h"
 #include "path_tracer.h"
 #include "helpers.h"
+#include "scene/Scene.h"
 
 // EXR
 #include <ImfArray.h>
@@ -59,6 +49,47 @@ bool outline = false;
 // PathTracerScene
 //
 //-----------------------------------------------------------------------------
+class PathTracerScene: public SampleScene
+{
+public:
+  // Set the actual render parameters below in main().
+  PathTracerScene()
+  : m_rr_begin_depth(1u)
+  , m_max_depth(100u)
+  , m_sqrt_num_samples( 0u )
+  , m_width(512u)
+  , m_height(512u)
+  , scene(sceneType) {
+	lightmap_path = "/data/outside.ppm";
+	lightmap_y_rot = 1.7f;
+  }
+
+  virtual void   initScene( InitialCameraData& camera_data );
+  virtual void   trace( const RayGenCameraData& camera_data );
+  virtual Buffer getOutputBuffer();
+
+  void   setNumSamples( unsigned int sns )                           { m_sqrt_num_samples= sns; }
+  void   setDimensions( const unsigned int w, const unsigned int h ) { m_width = w; m_height = h; }
+
+private:
+  // Should return true if key was handled, false otherwise.
+  virtual bool keyPressed(unsigned char key, int x, int y);
+
+  unsigned int   m_rr_begin_depth;
+  unsigned int   m_max_depth;
+  unsigned int   m_sqrt_num_samples;
+  unsigned int   m_width;
+  unsigned int   m_height;
+  unsigned int   m_frame;
+  unsigned int   m_sampling_strategy;
+
+  float lightmap_y_rot;
+
+  string lightmap_path;
+
+  Scene scene;
+};
+
 
 optix::TextureSampler loadExrTexture( const char fileName[],
 											optix::Context context,
@@ -116,9 +147,6 @@ optix::TextureSampler loadExrTexture( const char fileName[],
       unsigned int buf_index = ( j*nx + i )*4;
 
       Imf::Rgba pix = pixels[0][ppm_index];
-
-      //std::cout << pix << std::endl;
-
       buffer_data[ buf_index + 0 ] = pix.r;
       buffer_data[ buf_index + 1 ] = pix.g;
       buffer_data[ buf_index + 2 ] = pix.b;
@@ -133,73 +161,6 @@ optix::TextureSampler loadExrTexture( const char fileName[],
 
   return sampler;
 }
-
-
-class PathTracerScene: public SampleScene
-{
-public:
-  // Set the actual render parameters below in main().
-  PathTracerScene()
-  : m_rr_begin_depth(1u)
-  , m_max_depth(100u)
-  , m_sqrt_num_samples( 0u )
-  , m_width(512u)
-  , m_height(512u)
-  {
-	  lightmap_path = "/data/outside.ppm";
-	  lightmap_y_rot = 1.7f;
-  }
-
-  virtual void   initScene( InitialCameraData& camera_data );
-  virtual void   trace( const RayGenCameraData& camera_data );
-  virtual Buffer getOutputBuffer();
-
-  void   setNumSamples( unsigned int sns )                           { m_sqrt_num_samples= sns; }
-  void   setDimensions( const unsigned int w, const unsigned int h ) { m_width = w; m_height = h; }
-
-private:
-  // Should return true if key was handled, false otherwise.
-  virtual bool keyPressed(unsigned char key, int x, int y);
-
-
-  void makeMaterialPrograms( Material material, const char *filename,
-                                                            const char *ch_program_name,
-                                                            const char *ah_program_name );
-
-  optix::Material createMaterials(string);
-
-
-  void createGlassGeometry( const std::string& path );
-  void createGeometry();
-
-  GeometryInstance createParallelogram( const float3& anchor,
-                                        const float3& offset1,
-                                        const float3& offset2);
-
-  GeometryInstance createLightParallelogram( const float3& anchor,
-                                             const float3& offset1,
-                                             const float3& offset2,
-                                             int lgt_instance = -1);
-  void setMaterial( GeometryInstance& gi,
-                    Material material,
-                    const std::string& color_name,
-                    const float3& color);
-
-  Program        m_pgram_bounding_box;
-  Program        m_pgram_intersection;
-
-  unsigned int   m_rr_begin_depth;
-  unsigned int   m_max_depth;
-  unsigned int   m_sqrt_num_samples;
-  unsigned int   m_width;
-  unsigned int   m_height;
-  unsigned int   m_frame;
-  unsigned int   m_sampling_strategy;
-
-  float lightmap_y_rot;
-
-  string lightmap_path;
-};
 
 
 void PathTracerScene::initScene( InitialCameraData& camera_data )
@@ -223,11 +184,7 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
 
 
   // Set up camera
-//  camera_data = InitialCameraData( make_float3( 278.0f, 273.0f, -800.0f ), // eye
-//                                   make_float3( 278.0f, 273.0f, 0.0f ),    // lookat
-//                                   make_float3( 0.0f, 1.0f,  0.0f ),       // up
-//                                   35.0f );                                // vfov
-    camera_data = InitialCameraData( make_float3( 1272.55f, 717.138f, -1107.04f ), // eye
+  	  camera_data = InitialCameraData( make_float3( 1272.55f, 717.138f, -1107.04f ), // eye
                                      make_float3( 190.117f, 83.4595f, 418.087f ),    // lookat
                                      make_float3( -0.205594f, 0.946826f, 0.247492f ),       // up
                                      47.3788f );                                // vfov
@@ -272,8 +229,25 @@ void PathTracerScene::initScene( InitialCameraData& camera_data )
   m_context["envmap"]->setTextureSampler( loadExrTexture( "vuw_sunny_hdr_mod1_5024.exr", m_context, default_color) );
 
   // Create scene geometry
-  //createGeometry();
-  createGlassGeometry("resource");
+  // setup mesh programs
+  std::string mesh_ptx_path = ptxpath( "path_tracer", "triangle_mesh_iterative.cu" );
+  Program bounding_box = m_context->createProgramFromPTXFile( mesh_ptx_path, "mesh_bounds" );
+  Program intersection = m_context->createProgramFromPTXFile( mesh_ptx_path, "mesh_intersect" );
+  scene.setMeshPrograms(bounding_box, intersection);
+
+  // material programs
+
+  Program diffuse_ch;
+  if ( outline ) {
+	  diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse2" );
+  }
+  else {
+	  diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse" );
+  }
+  Program diffuse_ah = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "shadow" );
+  scene.setMaterialPrograms(diffuse_ch, diffuse_ah);
+  scene.virtualGeometry( m_context, "resource" );
+
 
   // Finalize
   m_context->validate();
@@ -331,261 +305,6 @@ Buffer PathTracerScene::getOutputBuffer()
   return m_context["output_buffer"]->getBuffer();
 }
 
-GeometryInstance PathTracerScene::createParallelogram( const float3& anchor,
-                                                       const float3& offset1,
-                                                       const float3& offset2)
-{
-  Geometry parallelogram = m_context->createGeometry();
-  parallelogram->setPrimitiveCount( 1u );
-  parallelogram->setIntersectionProgram( m_pgram_intersection );
-  parallelogram->setBoundingBoxProgram( m_pgram_bounding_box );
-
-  float3 normal = normalize( cross( offset1, offset2 ) );
-  float d = dot( normal, anchor );
-  float4 plane = make_float4( normal, d );
-
-  float3 v1 = offset1 / dot( offset1, offset1 );
-  float3 v2 = offset2 / dot( offset2, offset2 );
-
-  parallelogram["plane"]->setFloat( plane );
-  parallelogram["anchor"]->setFloat( anchor );
-  parallelogram["v1"]->setFloat( v1 );
-  parallelogram["v2"]->setFloat( v2 );
-
-  GeometryInstance gi = m_context->createGeometryInstance();
-  gi->setGeometry(parallelogram);
-  return gi;
-}
-
-GeometryInstance PathTracerScene::createLightParallelogram( const float3& anchor,
-                                                            const float3& offset1,
-                                                            const float3& offset2,
-                                                            int lgt_instance)
-{
-  Geometry parallelogram = m_context->createGeometry();
-  parallelogram->setPrimitiveCount( 1u );
-  parallelogram->setIntersectionProgram( m_pgram_intersection );
-  parallelogram->setBoundingBoxProgram( m_pgram_bounding_box );
-
-  float3 normal = normalize( cross( offset1, offset2 ) );
-  float d = dot( normal, anchor );
-  float4 plane = make_float4( normal, d );
-
-  float3 v1 = offset1 / dot( offset1, offset1 );
-  float3 v2 = offset2 / dot( offset2, offset2 );
-
-  parallelogram["plane"]->setFloat( plane );
-  parallelogram["anchor"]->setFloat( anchor );
-  parallelogram["v1"]->setFloat( v1 );
-  parallelogram["v2"]->setFloat( v2 );
-  parallelogram["lgt_instance"]->setInt( lgt_instance );
-
-  GeometryInstance gi = m_context->createGeometryInstance();
-  gi->setGeometry(parallelogram);
-  return gi;
-}
-
-void PathTracerScene::setMaterial( GeometryInstance& gi,
-                                   Material material,
-                                   const std::string& color_name,
-                                   const float3& color)
-{
-  gi->addMaterial(material);
-  gi[color_name]->setFloat(color);
-}
-
-void PathTracerScene::makeMaterialPrograms( Material material, const char *filename,
-                                                          const char *ch_program_name,
-                                                          const char *ah_program_name )
-{
-  Program ch_program = m_context->createProgramFromPTXFile( ptxpath("path_tracer", filename), ch_program_name );
-  Program ah_program = m_context->createProgramFromPTXFile( ptxpath("path_tracer", filename), ah_program_name );
-
-  material->setClosestHitProgram( 0, ch_program );
-  material->setAnyHitProgram( 1, ah_program );
-}
-
-optix::Material PathTracerScene::createMaterials(string name)
-{
-	optix::Material material[1];
-  material[0] = m_context->createMaterial();
-
-  Program diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), name );
-  Program diffuse_ah = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "shadow" );
-  material[0]->setClosestHitProgram( 0, diffuse_ch );
-  material[0]->setAnyHitProgram( 1, diffuse_ah );
-
-//  makeMaterialPrograms( material[0], "glass.cu", "closest_hit_radiance", "any_hit_shadow");
-//
-//  material[0]["importance_cutoff"  ]->setFloat( 0.01f );
-//  material[0]["cutoff_color"       ]->setFloat( 0.2f, 0.2f, 0.2f );
-//  material[0]["fresnel_exponent"   ]->setFloat( 4.0f );
-//  material[0]["fresnel_minimum"    ]->setFloat( 0.1f );
-//  material[0]["fresnel_maximum"    ]->setFloat( 1.0f );
-//  material[0]["refraction_index"   ]->setFloat( 1.4f );
-//  material[0]["refraction_color"   ]->setFloat( 0.99f, 0.99f, 0.99f );
-//  material[0]["reflection_color"   ]->setFloat( 0.99f, 0.99f, 0.99f );
-//  material[0]["refraction_maxdepth"]->setInt( 10 );
-//  material[0]["reflection_maxdepth"]->setInt( 5 );
-//  float3 extinction = make_float3(.80f, .89f, .75f);
-//  material[0]["extinction_constant"]->setFloat( log(extinction.x), log(extinction.y), log(extinction.z) );
-//  material[0]["shadow_attenuation"]->setFloat( 1.0f, 1.0f, 1.0f );
-
-  return material[0];
-}
-
-void PathTracerScene::createGlassGeometry( const std::string& path ) {
-	  // Set up parallelogram programs
-	  std::string ptx_path = ptxpath( "path_tracer", "triangle_mesh_iterative.cu" );
-	  m_pgram_bounding_box = m_context->createProgramFromPTXFile( ptx_path, "mesh_bounds" );
-	  m_pgram_intersection = m_context->createProgramFromPTXFile( ptx_path, "mesh_intersect" );
-
-	optix::Material material = createMaterials("diffuse");
-
-
-  // Load OBJ files and set as geometry groups
-  GeometryGroup geomgroup[3] = { m_context->createGeometryGroup(),
-                                 m_context->createGeometryGroup(),
-                                 m_context->createGeometryGroup() };
-
-  // Set transformations
-  float scale = 32.0f;
-  const float matrix_0[4*4] = { scale,  0,  0,  0,
-                                0,  scale,  0,  0,
-                                0,  0,  scale, -5,
-                                0,  0,  0,  1 };
-
-  const float matrix_1[4*4] = { scale,  0,  0,  0,
-                                0,  scale,  0,  0,
-                                0,  0,  scale,  0,
-                                0,  0,  0,  1 };
-
-  const float matrix_2[4*4] = { scale,  0,  0, -5,
-                                0,  scale,  0,  0,
-                                0,  0,  scale,  0,
-                                0,  0,  0,  1 };
-
-  const optix::Matrix4x4 m0( matrix_0 );
-  const optix::Matrix4x4 m1( matrix_1 );
-  const optix::Matrix4x4 m2( matrix_2 );
-
-  ObjLoader objloader0( (path + "/cognacglass.obj").c_str(), m_context, geomgroup[0], material );
-  objloader0.setIntersectProgram( m_pgram_intersection );
-  objloader0.load( m0 );
-//  ObjLoader objloader1( (path + "/wineglass.obj").c_str(),   m_context, geomgroup[1], material );
-//  objloader1.setIntersectProgram( m_pgram_intersection );
-//  objloader1.load( m1 );
-//  ObjLoader objloader2( (path + "/waterglass.obj").c_str(),  m_context, geomgroup[2], material );
-//  objloader2.setIntersectProgram( m_pgram_intersection );
-//  objloader2.load( m2 );
-
-
-  GeometryInstance gi = geomgroup[0]->getChild(0);
-  const float3 green = make_float3( 0.05f, 0.8f, 0.05f );
-  setMaterial(gi, material, "diffuse_color", green);
-
-  GeometryGroup maingroup = m_context->createGeometryGroup();
-  maingroup->setChildCount( 1 );
-  maingroup->setChild( 0, geomgroup[0]->getChild(0) );
-  //maingroup->setChild( 1, geomgroup[1]->getChild(0) );
-  //maingroup->setChild( 2, geomgroup[2]->getChild(0) );
-  maingroup->setAcceleration( m_context->createAcceleration("Bvh","BvhSingle") );
-  m_context["top_object"]->set( maingroup );
-}
-
-void PathTracerScene::createGeometry()
-{
-  // Set up material
-  Material diffuse = m_context->createMaterial();
-
-  if ( outline ) {
-	  Program diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse2" );
-	  Program diffuse_ah = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "shadow" );
-	  diffuse->setClosestHitProgram( 0, diffuse_ch );
-	  diffuse->setAnyHitProgram( 1, diffuse_ah );
-
-  } else {
-	  Program diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse" );
-	  Program diffuse_ah = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "shadow" );
-	  diffuse->setClosestHitProgram( 0, diffuse_ch );
-	  diffuse->setAnyHitProgram( 1, diffuse_ah );
-  }
-
-  // Set up parallelogram programs
-  std::string ptx_path = ptxpath( "path_tracer", "parallelogram.cu" );
-  m_pgram_bounding_box = m_context->createProgramFromPTXFile( ptx_path, "bounds" );
-  m_pgram_intersection = m_context->createProgramFromPTXFile( ptx_path, "intersect" );
-
-  // create geometry instances
-  std::vector<GeometryInstance> gis;
-
-//  const float3 white = make_float3( 0.8f, 0.8f, 0.8f );
-//  const float3 green = make_float3( 0.05f, 0.8f, 0.05f );
-//  const float3 orange = make_float3( 0.8f, 0.4f, 0.05f );
-//  const float3 grey   = make_float3( 0.2f, 0.2f, 0.2f );
-//  const float3 light_em = make_float3( 15.0f, 15.0f, 5.0f );
-//
-//  // Floor
-//  if (sceneType == 1 || sceneType == 2) {
-//		gis.push_back(
-//				createParallelogram(make_float3(-600.0f, 0.0f, -600.0f),
-//						make_float3(0.0f, 0.0f, 1559.2f),
-//						make_float3(1556.0f, 0.0f, 0.0f)));
-//		setMaterial(gis.back(), diffuse, "diffuse_color", grey);
-//  }
-//
-//  // Short block
-//  if (sceneType > 1) {
-//  gis.push_back( createParallelogram( make_float3( 130.0f, 165.0f, 65.0f),
-//                                      make_float3( -48.0f, 0.0f, 160.0f),
-//                                      make_float3( 160.0f, 0.0f, 49.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", green);
-//  gis.push_back( createParallelogram( make_float3( 290.0f, 0.0f, 114.0f),
-//                                      make_float3( 0.0f, 165.0f, 0.0f),
-//                                      make_float3( -50.0f, 0.0f, 158.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", green);
-//  gis.push_back( createParallelogram( make_float3( 130.0f, 0.0f, 65.0f),
-//                                      make_float3( 0.0f, 165.0f, 0.0f),
-//                                      make_float3( 160.0f, 0.0f, 49.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", green);
-//  gis.push_back( createParallelogram( make_float3( 82.0f, 0.0f, 225.0f),
-//                                      make_float3( 0.0f, 165.0f, 0.0f),
-//                                      make_float3( 48.0f, 0.0f, -160.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", green);
-//  gis.push_back( createParallelogram( make_float3( 240.0f, 0.0f, 272.0f),
-//                                      make_float3( 0.0f, 165.0f, 0.0f),
-//                                      make_float3( -158.0f, 0.0f, -47.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", green);
-//
-//  // Tall block
-//  gis.push_back( createParallelogram( make_float3( 423.0f, 330.0f, 247.0f),
-//                                      make_float3( -158.0f, 0.0f, 49.0f),
-//                                      make_float3( 49.0f, 0.0f, 159.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
-//  gis.push_back( createParallelogram( make_float3( 423.0f, 0.0f, 247.0f),
-//                                      make_float3( 0.0f, 330.0f, 0.0f),
-//                                      make_float3( 49.0f, 0.0f, 159.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
-//  gis.push_back( createParallelogram( make_float3( 472.0f, 0.0f, 406.0f),
-//                                      make_float3( 0.0f, 330.0f, 0.0f),
-//                                      make_float3( -158.0f, 0.0f, 50.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
-//  gis.push_back( createParallelogram( make_float3( 314.0f, 0.0f, 456.0f),
-//                                      make_float3( 0.0f, 330.0f, 0.0f),
-//                                      make_float3( -49.0f, 0.0f, -160.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
-//  gis.push_back( createParallelogram( make_float3( 265.0f, 0.0f, 296.0f),
-//                                      make_float3( 0.0f, 330.0f, 0.0f),
-//                                      make_float3( 158.0f, 0.0f, -49.0f) ) );
-//  setMaterial(gis.back(), diffuse, "diffuse_color", orange);
-//  }
-
-  // Create geometry group
-  GeometryGroup geometry_group = m_context->createGeometryGroup(gis.begin(), gis.end());
-  geometry_group->setAcceleration( m_context->createAcceleration("Bvh","Bvh") );
-  m_context["top_object"]->set( geometry_group );
-}
-
 //-----------------------------------------------------------------------------
 //
 // main
@@ -631,9 +350,9 @@ int main( int argc, char** argv )
   GLUTDisplay::init( argc, argv );
 
   // Process command line options
-  unsigned int sqrt_num_samples = 1u;
+  unsigned int sqrt_num_samples = 2u;
 
-  unsigned int width = 1600u, height = 900u;
+  unsigned int width = 960u, height = 540u;
   float timeout = 0.0f;
 
   for ( int i = 1; i < argc; ++i ) {
@@ -686,7 +405,7 @@ int main( int argc, char** argv )
     scene.setNumSamples( sqrt_num_samples );
     scene.setDimensions( width, height );
     GLUTDisplay::setProgressiveDrawingTimeout(timeout);
-    GLUTDisplay::setUseSRGB(true);
+    GLUTDisplay::setUseSRGB(false);
     GLUTDisplay::run( desc, &scene, GLUTDisplay::CDProgressive );
   } catch( Exception& e ){
     sutilReportError( e.getErrorString().c_str() );
