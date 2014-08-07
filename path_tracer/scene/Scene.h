@@ -53,6 +53,8 @@ private:
 
 	  optix::Program diffuse_ch;
 	  optix::Program diffuse_ah;
+
+	  string lightmap_path;
 };
 
 } /* namespace std */

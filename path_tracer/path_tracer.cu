@@ -21,29 +21,29 @@
 
 #include <optix.h>
 #include <optixu/optixu_math_namespace.h>
+
 #include "helpers.h"
 #include "path_tracer.h"
 #include "random.h"
 
 using namespace optix;
 
-struct PerRayData_pathtrace
-{
-  float3 result;
-  float3 radiance;
-  float3 attenuation;
-  float3 origin;
-  float3 direction;
-  unsigned int seed;
-  int depth;
-  int countEmitted;
-  int done;
-  int inside;
+struct PerRayData_pathtrace {
+	float3 result;
+	float3 radiance;
+	float3 attenuation;
+	float3 origin;
+	float3 direction;
+	unsigned int seed;
+	int depth;
+	int countEmitted;
+	int done;
+	int inside;
+	int outline;	// outline mode = 1
 };
 
-struct PerRayData_pathtrace_shadow
-{
-  bool inShadow;
+struct PerRayData_pathtrace_shadow {
+	bool inShadow;
 };
 
 // Scene wide
@@ -135,6 +135,7 @@ RT_PROGRAM void pathtrace_camera()
     prd.inside = false;
     prd.seed = seed;
     prd.depth = 0;
+    prd.outline = 1;
 
     for(;;) {
       Ray ray = make_Ray(ray_origin, ray_direction, pathtrace_ray_type, scene_epsilon, RT_DEFAULT_MAX);
@@ -187,8 +188,31 @@ RT_PROGRAM void diffuseEmitter()
 
 rtDeclareVariable(float3,        diffuse_color, , );
 
+RT_PROGRAM void diffuse_outline()
+{
+
+  current_prd.attenuation = make_float3(1.0f, 0.0f, 0.0f); // red
+  current_prd.countEmitted = false;
+
+  float3 result = make_float3(1.0f, 0.0f, 0.0f);
+
+  current_prd.radiance = result;
+  current_prd.done = true;
+}
+
 RT_PROGRAM void diffuse()
 {
+
+	if (current_prd.outline == 1) {
+		  current_prd.attenuation = make_float3(1.0f, 0.0f, 0.0f); // red
+		  current_prd.countEmitted = false;
+
+		  float3 result = make_float3(1.0f, 0.0f, 0.0f);
+
+		  current_prd.radiance = result;
+		  current_prd.done = true;
+		return;
+	}
   float3 world_shading_normal   = normalize( rtTransformNormal( RT_OBJECT_TO_WORLD, shading_normal ) );
   float3 world_geometric_normal = normalize( rtTransformNormal( RT_OBJECT_TO_WORLD, geometric_normal ) );
 
@@ -214,18 +238,6 @@ RT_PROGRAM void diffuse()
   // Compute light...
   float3 result = make_float3(0.0f);
   current_prd.radiance = result;
-}
-
-RT_PROGRAM void diffuse2()
-{
-
-  current_prd.attenuation = make_float3(1.0f, 0.0f, 0.0f); // red
-  current_prd.countEmitted = false;
-
-  float3 result = make_float3(1.0f, 0.0f, 0.0f);
-
-  current_prd.radiance = result;
-  current_prd.done = true;
 }
 
 rtDeclareVariable(float3,        glass_color, , );
@@ -286,13 +298,19 @@ rtTextureSampler<float4, 2> envmap;
 RT_PROGRAM void miss()
 {
 
+	if (current_prd.outline == 1) {
+		  current_prd.radiance = bg_color;
+		  current_prd.done = true;
+		return;
+	}
+
 	// sample the light map
   float theta = atan2f( ray.direction.x, ray.direction.z );
   float phi   = M_PIf * 0.5f -  acosf( ray.direction.y );
   float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
   float v     = 0.5f * ( 1.0f + sin(phi) );
   float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-  emap = 5.0f * (emap + 0.40f * powf(emap, 5.0f));
+  emap = 5.0f * (emap + 0.00f * powf(emap, 2.0f));
 
   current_prd.radiance = emap;
   current_prd.done = true;

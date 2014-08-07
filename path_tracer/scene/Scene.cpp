@@ -10,7 +10,9 @@
 #include <SampleScene.h>
 #include <ObjLoader.h>
 
+#include "../exr/imageio.h"
 #include "Scene.h"
+
 
 namespace std {
 
@@ -20,6 +22,9 @@ Scene::Scene(int sceneType) {
 	// input camera location
 
 	// input light map
+	//lightmap_path = "/data/outside.ppm";
+	//lightmap_path = "vuw_sunny_hdr_mod1_5024.exr";
+	lightmap_path = "vuw_quad_hdr_5024.exr";
 
 	// input local models
 
@@ -69,6 +74,10 @@ void Scene::setMaterialPrograms( optix::Program ch, optix::Program ah ) {
 
 void Scene::virtualGeometry( optix::Context &m_context, const std::string& path ) {
 	optix::Material material = createMaterials(m_context, "diffuse");
+
+	std::string full_path = std::string( sutilSamplesDir() ) + lightmap_path;
+	const optix::float3 default_color = optix::make_float3( 0.8f, 0.88f, 0.97f );
+	m_context["envmap"]->setTextureSampler( loadExrTexture( lightmap_path.c_str(), m_context, default_color) );
 
 	// Load OBJ files and set as geometry groups
 	cout << "read " << models.size() << endl;

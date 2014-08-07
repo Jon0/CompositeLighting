@@ -12,6 +12,16 @@ Feel free to do whatever you want.
 #include <ImfInputFile.h>
 #include <ImfRgbaFile.h>
 
+
+#include <optixu/optixpp_namespace.h>
+#include <optixu/optixu_math_namespace.h>
+#include <optixu/optixu_matrix_namespace.h>
+
+optix::TextureSampler loadExrTexture( const char fileName[],
+											optix::Context context,
+                                            const optix::float3& default_color);
+
+
 namespace Imf {
 
 class imageio{
