@@ -21,7 +21,10 @@
 #include "random.h"
 #include "path_tracer.h"
 #include "helpers.h"
+
+#include "Renderer.h"
 #include "scene/Scene.h"
+
 
 // EXR
 #include <ImfArray.h>
@@ -34,8 +37,7 @@ namespace std {
 // PathTracerScene
 //
 //-----------------------------------------------------------------------------
-class PathTracerScene: public SampleScene
-{
+class PathTracerScene: public SampleScene {
 public:
   // Set the actual render parameters below in main().
   PathTracerScene(int sceneType, bool o)
@@ -75,6 +77,7 @@ private:
   float lightmap_y_rot;
 
   Scene scene;
+  Renderer final, empty, local, all, local_out, virt_out;
 
   bool outline;
 };

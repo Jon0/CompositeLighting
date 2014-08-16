@@ -25,10 +25,12 @@ if(GLUT_FOUND AND OPENGL_FOUND)
 
   # See top level CMakeLists.txt file for documentation of OPTIX_add_sample_executable.
   OPTIX_add_sample_executable( path_tracer
-	path_tracer.cpp
+	main.cpp
 
 	PathTracer.cpp
 	PathTracer.h
+  Renderer.cpp
+  Renderer.h
 
 	scene/Scene.cpp
 	scene/Scene.h

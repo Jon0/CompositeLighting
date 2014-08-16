@@ -49,6 +49,9 @@ struct PerRayData_pathtrace_shadow {
 // Scene wide
 rtDeclareVariable(float,         scene_epsilon, , );
 rtDeclareVariable(rtObject,      top_object, , );
+rtDeclareVariable(rtObject,      local_object, , );
+rtDeclareVariable(rtObject,      virt_object, , );
+rtDeclareVariable(rtObject,      empty_object, , );
 
 // For camera
 rtDeclareVariable(float3,        eye, , );
@@ -59,6 +62,14 @@ rtDeclareVariable(float3,        bad_color, , );
 rtDeclareVariable(unsigned int,  frame_number, , );
 rtDeclareVariable(unsigned int,  sqrt_num_samples, , );
 rtBuffer<float4, 2>              output_buffer;
+rtBuffer<float4, 2>              output_buffer_empty;	// photo
+rtBuffer<float4, 2>              output_buffer_local;
+rtBuffer<float4, 2>              output_buffer_all;
+rtBuffer<float4, 2>              output_buffer_local_out;
+rtBuffer<float4, 2>              output_buffer_virt_out;
+
+// use differential rendering
+rtDeclareVariable(unsigned int,  display_mode, , );
 
 // Lighting
 rtDeclareVariable(float,        lightmap_y_rot, , );
@@ -75,6 +86,9 @@ rtDeclareVariable(PerRayData_pathtrace, current_prd, rtPayload, );
 rtDeclareVariable(optix::Ray, ray,          rtCurrentRay, );
 rtDeclareVariable(float,      t_hit,        rtIntersectionDistance, );
 rtDeclareVariable(uint2,      launch_index, rtLaunchIndex, );
+
+// For miss program
+rtDeclareVariable(float3,       bg_color, , );
 
 static __device__ inline float3 powf(float3 a, float exp) {
 	return make_float3(powf(a.x, exp), powf(a.y, exp), powf(a.z, exp));
@@ -98,83 +112,144 @@ static __device__ inline float toSRGB(float a) {
 	}
 }
 
-// For miss program
-rtDeclareVariable(float3,       bg_color, , );
+static __device__ float3 getRay(rtObject geometry, int outline) {
+	  size_t2 screen = output_buffer.size();
+
+	  float2 inv_screen = 1.0f/make_float2(screen) * 2.f;
+	  float2 pixel = (make_float2(launch_index)) * inv_screen - 1.f;
+
+	  float2 jitter_scale = inv_screen / sqrt_num_samples;
+	  unsigned int samples_per_pixel = sqrt_num_samples*sqrt_num_samples;
+	  float3 result = make_float3(0.0f);
+
+	  unsigned int seed = tea<16>(screen.x*launch_index.y+launch_index.x, frame_number);
+	  do {
+	    unsigned int x = samples_per_pixel%sqrt_num_samples;
+	    unsigned int y = samples_per_pixel/sqrt_num_samples;
+	    float2 jitter = make_float2(x-rnd(seed), y-rnd(seed));
+	    float2 d = pixel + jitter*jitter_scale;
+	    float3 ray_origin = eye;
+	    float3 ray_direction = normalize(d.x*U + d.y*V + W);
+
+	    PerRayData_pathtrace prd;
+	    prd.result = make_float3(0.f);
+	    prd.attenuation = make_float3(1.f);
+	    prd.countEmitted = true;
+	    prd.done = false;
+	    prd.inside = false;
+	    prd.seed = seed;
+	    prd.depth = 0;
+	    prd.outline = outline;
+
+	    for(;;) {
+	    	// eye ray
+	      Ray ray = make_Ray(ray_origin, ray_direction, pathtrace_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+	      rtTrace(geometry, ray, prd);
+	      if(prd.done) {
+	        prd.result += prd.radiance * prd.attenuation;
+	        break;
+	      }
+
+	      // RR
+	      if(prd.depth >= rr_begin_depth){
+	        float pcont = fmaxf(prd.attenuation);
+	        if(rnd(prd.seed) >= pcont)
+	          break;
+	        prd.attenuation /= pcont;
+	      }
+	      prd.depth++;
+	      prd.result += prd.radiance * prd.attenuation;
+	      ray_origin = prd.origin;
+	      ray_direction = prd.direction;
+	    }
+
+	    result += prd.result;
+	    seed = prd.seed;
+	  } while (--samples_per_pixel);
+
+		float3 pixel_color = result/(sqrt_num_samples*sqrt_num_samples);
+		pixel_color.x = toSRGB(pixel_color.x);
+		pixel_color.y = toSRGB(pixel_color.y);
+		pixel_color.z = toSRGB(pixel_color.z);
+
+	return pixel_color;
+}
+
+static __device__ float4 getDifferential() {
+
+	float geomWeight = output_buffer_virt_out[launch_index].x;
+	float localWeight = output_buffer_local_out[launch_index].x;
+	float nongeomWeight = 1.0f - geomWeight;
+	float nonlocalWeight = 1.0f - localWeight;
+
+	float4 out = make_float4(0.0f);
+	out += geomWeight * output_buffer_all[launch_index];
+	out += nonlocalWeight * nongeomWeight * output_buffer_empty[launch_index];
+
+	// local * m = geom
+	float4 m0 = output_buffer_all[launch_index] / output_buffer_local[launch_index];
+	out += localWeight * nongeomWeight * output_buffer_empty[launch_index] * m0;
+
+	// is there a clamp function?
+	if (out.x > 1.0f) out.x = 1.0f;
+	else if (out.x < 0.0f) out.x = 0.0f;
+	if (out.y > 1.0f) out.y = 1.0f;
+	else if (out.y < 0.0f) out.y = 0.0f;
+	if (out.z > 1.0f) out.z = 1.0f;
+	else if (out.z < 0.0f) out.z = 0.0f;
+	if (out.w > 1.0f) out.w = 1.0f;
+	else if (out.w < 0.0f) out.w = 0.0f;
+
+	return out;
+}
 
 //-----------------------------------------------------------------------------
 //
 //  Camera program -- main ray tracing loop
 //
 //-----------------------------------------------------------------------------
-
 RT_PROGRAM void pathtrace_camera()
 {
-  size_t2 screen = output_buffer.size();
-
-  float2 inv_screen = 1.0f/make_float2(screen) * 2.f;
-  float2 pixel = (make_float2(launch_index)) * inv_screen - 1.f;
-
-  float2 jitter_scale = inv_screen / sqrt_num_samples;
-  unsigned int samples_per_pixel = sqrt_num_samples*sqrt_num_samples;
-  float3 result = make_float3(0.0f);
-
-  unsigned int seed = tea<16>(screen.x*launch_index.y+launch_index.x, frame_number);
-  do {
-    unsigned int x = samples_per_pixel%sqrt_num_samples;
-    unsigned int y = samples_per_pixel/sqrt_num_samples;
-    float2 jitter = make_float2(x-rnd(seed), y-rnd(seed));
-    float2 d = pixel + jitter*jitter_scale;
-    float3 ray_origin = eye;
-    float3 ray_direction = normalize(d.x*U + d.y*V + W);
-
-    PerRayData_pathtrace prd;
-    prd.result = make_float3(0.f);
-    prd.attenuation = make_float3(1.f);
-    prd.countEmitted = true;
-    prd.done = false;
-    prd.inside = false;
-    prd.seed = seed;
-    prd.depth = 0;
-    prd.outline = 1;
-
-    for(;;) {
-      Ray ray = make_Ray(ray_origin, ray_direction, pathtrace_ray_type, scene_epsilon, RT_DEFAULT_MAX);
-      rtTrace(top_object, ray, prd);
-      if(prd.done) {
-        prd.result += prd.radiance * prd.attenuation;
-        break;
-      }
-
-      // RR
-      if(prd.depth >= rr_begin_depth){
-        float pcont = fmaxf(prd.attenuation);
-        if(rnd(prd.seed) >= pcont)
-          break;
-        prd.attenuation /= pcont;
-      }
-      prd.depth++;
-      prd.result += prd.radiance * prd.attenuation;
-      ray_origin = prd.origin;
-      ray_direction = prd.direction;
-    } // eye ray
-
-    result += prd.result;
-    seed = prd.seed;
-  } while (--samples_per_pixel);
-
-  
-	float3 pixel_color = result/(sqrt_num_samples*sqrt_num_samples);
-	pixel_color.x = toSRGB(pixel_color.x);
-	pixel_color.y = toSRGB(pixel_color.y);
-	pixel_color.z = toSRGB(pixel_color.z);
+	float3 pixel_color_local = getRay(local_object, 0);
+	float3 pixel_color_all = getRay(top_object, 0);
 
 	if (frame_number > 1) {
 		float a = 1.0f / (float) frame_number;
 		float b = ((float) frame_number - 1.0f) * a;
-		float3 old_color = make_float3(output_buffer[launch_index]);
-		output_buffer[launch_index] = make_float4(a * pixel_color + b * old_color, 0.0f);
+		float3 old_color_all = make_float3(output_buffer_all[launch_index]);
+		output_buffer_all[launch_index] = make_float4(a * pixel_color_all + b * old_color_all, 0.0f);
+
+		float3 old_color_local = make_float3(output_buffer_local[launch_index]);
+		output_buffer_local[launch_index] = make_float4(a * pixel_color_local + b * old_color_local, 0.0f);
 	} else {
-		output_buffer[launch_index] = make_float4(pixel_color, 0.0f);
+		// refresh outlines and empty scene
+		//output_buffer_empty[launch_index] = make_float4( getRay(empty_object, 0), 0.0f );
+		output_buffer_local_out[launch_index] = make_float4( getRay(local_object, 1), 0.0f );
+		output_buffer_virt_out[launch_index] = make_float4( getRay(virt_object, 1), 0.0f );
+
+		// reset continuous buffers
+		output_buffer_local[launch_index] = make_float4( pixel_color_local, 0.0f );
+		output_buffer_all[launch_index] = make_float4( pixel_color_all, 0.0f );
+	}
+
+	// final output
+	if (display_mode == 1) {
+		output_buffer[launch_index] = output_buffer_all[launch_index];
+	}
+	else if (display_mode == 2) {
+		output_buffer[launch_index] = output_buffer_local[launch_index];
+	}
+	else if (display_mode == 3) {
+		output_buffer[launch_index] = output_buffer_local_out[launch_index];
+	}
+	else if (display_mode == 4) {
+		output_buffer[launch_index] = output_buffer_virt_out[launch_index];
+	}
+	else if (display_mode == 5) {
+		output_buffer[launch_index] = output_buffer_empty[launch_index];
+	}
+	else {
+		output_buffer[launch_index] = getDifferential();
 	}
 }
 
@@ -310,7 +385,7 @@ RT_PROGRAM void miss()
   float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
   float v     = 0.5f * ( 1.0f + sin(phi) );
   float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-  emap = 5.0f * (emap + 0.00f * powf(emap, 2.0f));
+  //emap = 5.0f * (emap + 0.00f * powf(emap, 2.0f));
 
   current_prd.radiance = emap;
   current_prd.done = true;

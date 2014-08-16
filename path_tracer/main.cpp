@@ -19,6 +19,10 @@
  * SUCH DAMAGES
  */
 
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+
 #include "PathTracer.h"
 
 using namespace std;
@@ -119,8 +123,6 @@ int main( int argc, char** argv )
 	  desc += "Out";
   }
 
-
-  //if( !GLUTDisplay::isBenchmark() ) printUsageAndExit( argv[0], false );
   try {
     PathTracerScene scene(sceneType, outline);
     scene.setNumSamples( sqrt_num_samples );

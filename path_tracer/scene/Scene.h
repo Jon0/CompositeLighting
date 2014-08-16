@@ -33,6 +33,7 @@ public:
 
 	void virtualGeometry( optix::Context &m_context, const std::string& path );
 
+	optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, Model, optix::Material);
 
 	void setMaterial( optix::GeometryInstance& gi,
 						optix::Material material,
@@ -43,10 +44,10 @@ public:
 	                                                            const char *ch_program_name,
 	                                                            const char *ah_program_name );
 
-	  optix::Material createMaterials(optix::Context &m_context, string);
+	optix::Material createMaterials(optix::Context &m_context, string);
 
 private:
-	  vector<Model> models;
+	  vector<Model> models, local_models;
 
 	  optix::Program m_pgram_bounding_box;
 	  optix::Program m_pgram_intersection;

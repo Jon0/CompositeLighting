@@ -1,32 +1,3 @@
-
-#
-#  Copyright (c) 2008 - 2009 NVIDIA Corporation.  All rights reserved.
-#
-#  NVIDIA Corporation and its licensors retain all intellectual property and proprietary
-#  rights in and to this software, related documentation and any modifications thereto.
-#  Any use, reproduction, disclosure or distribution of this software and related
-#  documentation without an express license agreement from NVIDIA Corporation is strictly
-#  prohibited.
-#
-#  TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THIS SOFTWARE IS PROVIDED *AS IS*
-#  AND NVIDIA AND ITS SUPPLIERS DISCLAIM ALL WARRANTIES, EITHER EXPRESS OR IMPLIED,
-#  INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-#  PARTICULAR PURPOSE.  IN NO EVENT SHALL NVIDIA OR ITS SUPPLIERS BE LIABLE FOR ANY
-#  SPECIAL, INCIDENTAL, INDIRECT, OR CONSEQUENTIAL DAMAGES WHATSOEVER (INCLUDING, WITHOUT
-#  LIMITATION, DAMAGES FOR LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF
-#  BUSINESS INFORMATION, OR ANY OTHER PECUNIARY LOSS) ARISING OUT OF THE USE OF OR
-#  INABILITY TO USE THIS SOFTWARE, EVEN IF NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF
-#  SUCH DAMAGES
-#
-
-
-# Welcome to the OptiX SDK build.  We have chosen CMake, because it can generate multiple
-# build systems for multiple architectures from a single script.  There are many resources
-# for CMake on-line at http://www.cmake.org and their wiki page,
-# http://www.cmake.org/Wiki/CMake, in addition to the documentation that comes with the
-# distribution.  There is also a book available if you wish to delve more deeply into
-# various topics.
-
 # If you wish to create your own project and use the SDK as a template there are a number
 # of things you should do.
 #
@@ -75,7 +46,7 @@
 
 # This sets up the name of our project.  For our purposes the main thing this controls is
 # the name of the VS solution file.
-project(OptiX-Samples)
+project(OptiX-Test)
 
 # This enforces a particular version of CMake that we require to process the script files
 # properly.
@@ -89,9 +60,7 @@ cmake_policy(VERSION 2.6)
 # Add paths to our CMake code to the module path, so they can be found automatically by
 # CMake.
 set(CMAKE_MODULE_PATH
-  "${CMAKE_SOURCE_DIR}/CMake"
-  ${CMAKE_MODULE_PATH}
-  )
+  "${CMAKE_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
 
 # Set the default build to Release.  Note this doesn't do anything for the VS
 # default build target which defaults to Debug when you first start it.
@@ -198,6 +167,14 @@ include_directories(
   "${OPENEXR_INCLUDE_PATHS}"
 )
 
+find_package(PkgConfig REQUIRED)
+pkg_search_module(GLFW REQUIRED glfw3)
+include_directories(${GLFW_INCLUDE_DIRS})
+
+if( NOT GLFW_FOUND )
+  message( FATAL_ERROR "GLFW is required" )
+endif()
+
 # Force the perforce plugin off for the SDK.
 set(USE_PERFORCE OFF CACHE BOOL "This is forced off." FORCE)
 
@@ -269,6 +246,7 @@ function(OPTIX_add_sample_executable target_name)
     optix
     ${optix_rpath}
     ${OPENEXR_LIBRARIES}
+    ${GLFW_LIBRARIES}
   )
   if(USING_GNU_CXX)
     target_link_libraries( ${target_name} m ) # Explicitly link against math library (C samples don't do that by default)

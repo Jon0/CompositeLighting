@@ -27,15 +27,11 @@ Scene::Scene(int sceneType) {
 	lightmap_path = "vuw_quad_hdr_5024.exr";
 
 	// input local models
-
-	if (sceneType == 1 || sceneType == 2) {
-			models.push_back(Model{"/plane.obj", { scale, 0, 0, 0,
-					0, scale, 0, -1.3 * scale,
-					0, 0, scale, 0,
-					0, 0, 0, scale },
-					optix::make_float3( 0.9f, 0.9f, 0.9f )});
-	}
-	if (sceneType >= 2) {
+	local_models.push_back(Model{"/plane.obj", { scale, 0, 0, 0,
+			0, scale, 0, -1.3 * scale,
+			0, 0, scale, 0,
+			0, 0, 0, scale },
+			optix::make_float3( 0.9f, 0.9f, 0.9f )});
 
 	// input virtual models
 	models.push_back(Model{"/cognacglass.obj", { scale, 0, 0, 0,
@@ -53,8 +49,11 @@ Scene::Scene(int sceneType) {
             0,  0,  scale,  0,
             0,  0,  0,  1*scale },
 			optix::make_float3( 0.8f, 0.4f, 0.05f )});
-	}
-
+	models.push_back(Model{"/dragon.obj", { 20*scale,  0,  0, 15*scale,
+	            0,  20*scale,  0,  5.7*scale,
+	            0,  0,  20*scale,  20*scale,
+	            0,  0,  0,  1*scale },
+				optix::make_float3( 0.3f, 0.4f, 0.85f )});
 
 }
 
@@ -80,27 +79,54 @@ void Scene::virtualGeometry( optix::Context &m_context, const std::string& path 
 	m_context["envmap"]->setTextureSampler( loadExrTexture( lightmap_path.c_str(), m_context, default_color) );
 
 	// Load OBJ files and set as geometry groups
-	cout << "read " << models.size() << endl;
-	optix::GeometryGroup geomgroup[models.size()];
+	cout << "reading " << (local_models.size() + models.size()) << " models" << endl;
+
+
 	optix::GeometryGroup maingroup = m_context->createGeometryGroup();
-	maingroup->setChildCount( models.size() );
+	maingroup->setChildCount( local_models.size() + models.size() );
+	optix::GeometryGroup localgroup = m_context->createGeometryGroup();
+	localgroup->setChildCount( local_models.size() );
+	optix::GeometryGroup virtgroup = m_context->createGeometryGroup();
+	virtgroup->setChildCount( models.size() );
+	optix::GeometryGroup emptygroup = m_context->createGeometryGroup();
+	emptygroup->setChildCount( 0 );
 
 	// setup each model
 	for (int i = 0; i < models.size(); ++i) {
-		geomgroup[i] = m_context->createGeometryGroup();
-		const optix::Matrix4x4 m(models[i].transform);
-		ObjLoader objloader0((path + models[i].filepath).c_str(), m_context,
-				geomgroup[i], material);
-		objloader0.setIntersectProgram(m_pgram_intersection);
-		objloader0.load(m);
-
-		optix::GeometryInstance gi = geomgroup[i]->getChild(0);
-		setMaterial(gi, material, "diffuse_color", models[i].colour);
-		maingroup->setChild(i, geomgroup[i]->getChild(0));
+		optix::GeometryInstance gi = makeGeometry(m_context, path, models[i], material);
+		maingroup->setChild(i, gi);
+		virtgroup->setChild(i, gi);
 	}
 
-	maingroup->setAcceleration(m_context->createAcceleration("Bvh", "BvhSingle"));
+	// local models go in both groups
+	for (int i = 0; i < local_models.size(); ++i) {
+		optix::GeometryInstance gi = makeGeometry(m_context, path, local_models[i], material);
+		maingroup->setChild(models.size() + i, gi);
+		localgroup->setChild(i, gi);
+	}
+
+	maingroup->setAcceleration(m_context->createAcceleration("Bvh", "Bvh")); // BvhSingle
+	localgroup->setAcceleration(m_context->createAcceleration("Bvh", "Bvh"));
+	virtgroup->setAcceleration(m_context->createAcceleration("Bvh", "Bvh"));
+	emptygroup->setAcceleration(m_context->createAcceleration("Bvh", "Bvh"));
 	m_context["top_object"]->set(maingroup);
+	m_context["local_object"]->set(localgroup);
+	m_context["virt_object"]->set(virtgroup);
+	m_context["empty_object"]->set(emptygroup);
+}
+
+optix::GeometryInstance Scene::makeGeometry( optix::Context &m_context, const std::string& path, Model model, optix::Material material ) {
+	optix::GeometryGroup model_group = m_context->createGeometryGroup();
+
+	const optix::Matrix4x4 m(model.transform);
+	ObjLoader objloader0((path + model.filepath).c_str(), m_context,
+			model_group, material);
+	objloader0.setIntersectProgram(m_pgram_intersection);
+	objloader0.load(m);
+
+	optix::GeometryInstance gi = model_group->getChild(0);
+	setMaterial(gi, material, "diffuse_color", model.colour);
+	return gi;
 }
 
 void Scene::setMaterial( optix::GeometryInstance& gi,
