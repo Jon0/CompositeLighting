@@ -33,10 +33,19 @@ void PathTracerScene::initScene(InitialCameraData& camera_data) {
 	empty.init(m_context, "output_buffer_empty", "resource/ot.ppm");	// load photo from ppm file
 
 	// Set up camera
-	camera_data = InitialCameraData( make_float3( 1272.55f, 717.138f, -1107.04f ), // eye
-                                     make_float3( 190.117f, 83.4595f, 418.087f ),    // lookat
-                                     make_float3( -0.205594f, 0.946826f, 0.247492f ),       // up
-                                     47.3788f );                                // vfov
+	camera_data = InitialCameraData( make_float3( -42.067986f, 13.655909f, -7.266403f ), // eye
+                                     make_float3( 0.938559f, -0.304670f, 0.162117f ),    // lookat
+                                     make_float3( 0.300224f, 0.952457f, 0.051857f ),       // up
+                                     32.0f ); // vfov
+
+
+	//LookAt -42.0679868067 13.6559098068 -7.26640305635 0.938559393527 -0.304670686648 0.162117357244 0.300224901059 0.95245775376 0.0518578449849
+	//Camera "perspective" "float fov" [27.2161115573]
+
+//	camera_data = InitialCameraData( make_float3( -42.067986f, 13.655909f, -7.266403f ), 		// eye
+//                                     make_float3( 0.938559f, -0.304670f, 0.162117f ),    	// lookat
+//                                     make_float3( 0.300224f, 0.952457f, 0.051857f, ),		// up
+//                                     27.216111f ); 														// vfov
 
 	// Declare these so validation will pass
 	m_context["eye"]->setFloat(make_float3(0.0f, 0.0f, 0.0f));

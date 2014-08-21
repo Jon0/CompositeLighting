@@ -47,7 +47,7 @@ public:
   , m_width(512u)
   , m_height(512u)
   , scene(sceneType) {
-	lightmap_y_rot = 1.7f;
+	lightmap_y_rot = 0.28f;
 	outline = o;
   }
 

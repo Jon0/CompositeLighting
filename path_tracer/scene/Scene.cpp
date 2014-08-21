@@ -17,7 +17,7 @@
 namespace std {
 
 Scene::Scene(int sceneType) {
-	float scale = 48.0f;
+	float scale = 1.0f;
 
 	// input camera location
 
@@ -27,29 +27,50 @@ Scene::Scene(int sceneType) {
 	lightmap_path = "vuw_quad_hdr_5024.exr";
 
 	// input local models
-	local_models.push_back(Model{"/plane.obj", { scale, 0, 0, 0,
-			0, scale, 0, -1.3 * scale,
+
+	local_models.push_back(Model{"/base.obj", { scale, 0, 0, 0,
+			0, scale, 0, 0,
 			0, 0, scale, 0,
 			0, 0, 0, scale },
 			optix::make_float3( 0.9f, 0.9f, 0.9f )});
+	local_models.push_back(Model{"/ycube.obj", { scale, 0, 0, 0,
+			0, scale, 0, 0,
+			0, 0, scale, 0,
+			0, 0, 0, scale },
+			optix::make_float3( 1.0f, 0.913f, 0.137f )});
+	local_models.push_back(Model{"/bcyl.obj", { scale, 0, 0, 0,
+			0, scale, 0, 0,
+			0, 0, scale, 0,
+			0, 0, 0, scale },
+			optix::make_float3( 0.131f, 0.331f, 0.745f )});
+	local_models.push_back(Model{"/gpipe.obj", { scale, 0, 0, 0,
+			0, scale, 0, 0,
+			0, 0, scale, 0,
+			0, 0, 0, scale },
+			optix::make_float3( 0.031f, 0.804f, 0.101f )});
+	local_models.push_back(Model{"/bpln.obj", { scale, 0, 0, 0,
+			0, scale, 0, 0,
+			0, 0, scale, 0,
+			0, 0, 0, scale },
+			optix::make_float3( 0.08f, 0.08f, 0.08f )});
 
 	// input virtual models
 	models.push_back(Model{"/cognacglass.obj", { scale, 0, 0, 0,
 			0, scale, 0, 0,
-			0, 0, scale,-5 * scale,
+			0, 0, scale,-8 * scale,
 			0, 0, 0, 1 * scale },
-			optix::make_float3( 0.05f, 0.8f, 0.05f )});
+			optix::make_float3( 0.9f, 0.9f, 0.9f )});
 	models.push_back(Model{"/wineglass.obj", { scale,  0,  0,  0,
             0,  scale,  0,  0,
             0,  0,  scale,  0,
             0,  0,  0,  1*scale },
-			optix::make_float3( 0.8f, 0.8f, 0.8f )});
+			optix::make_float3( 0.3f, 0.8f, 0.3f )});
 	models.push_back(Model{"/waterglass.obj", { scale,  0,  0, -5*scale,
             0,  scale,  0,  0,
-            0,  0,  scale,  0,
+            0,  0,  scale,  1*scale,
             0,  0,  0,  1*scale },
 			optix::make_float3( 0.8f, 0.4f, 0.05f )});
-	models.push_back(Model{"/dragon.obj", { 20*scale,  0,  0, 15*scale,
+	models.push_back(Model{"/dragon.obj", { 20*scale,  0,  0, -6*scale,
 	            0,  20*scale,  0,  5.7*scale,
 	            0,  0,  20*scale,  20*scale,
 	            0,  0,  0,  1*scale },
