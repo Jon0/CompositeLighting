@@ -1,28 +1,3 @@
-# If you wish to create your own project and use the SDK as a template there are a number
-# of things you should do.
-#
-# 1. You should copy the contents of the SDK to a place of your choice.
-# 
-# 2. You can remove any sample's directory you don't wish to build.  Be careful about
-#    the following directories.
-#
-#    a. CMake - contains helper scripts that make this all work.  You should keep this.
-#
-#    b. sutil - Almost all of the samples make use of this library one way or another, so
-#               you should probably keep it until you have your own frameowrk for your
-#               code.
-#
-#    c. nvcommon - Used by the hybrid samples.  If you don't use one of these samples as a
-#                  template, you can probably delete this directory.
-#
-#    d. simpleAnimation - This directory contains the cow.obj file used as an example for
-#                         many of the samples.  You can move cow.obj anywhere as long as
-#                         you fix all the file paths in the samples you wish to use it in.
-#
-# 3. You should update the list of sub directories that CMake needs to process below (look
-#    for the comment "List of samples found in subdirectories.")
-#
-
 # The basic flow of execution of this file is to do the following.
 #
 # 1. Setup the project and other global settings.  This involves processing some helper
@@ -161,19 +136,19 @@ if( NOT OPENEXR_FOUND )
   message( FATAL_ERROR "OpenExr is required" )
 endif()
 
-# Add the path to the OptiX headers to our include paths.
-include_directories(
-  "${OptiX_INCLUDE}"
-  "${OPENEXR_INCLUDE_PATHS}"
-)
-
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
-include_directories(${GLFW_INCLUDE_DIRS})
 
 if( NOT GLFW_FOUND )
   message( FATAL_ERROR "GLFW is required" )
 endif()
+
+# Add the path to the OptiX headers to our include paths.
+include_directories(
+  ${OptiX_INCLUDE}
+  ${OPENEXR_INCLUDE_PATHS}
+  ${GLFW_INCLUDE_DIRS}
+)
 
 # Force the perforce plugin off for the SDK.
 set(USE_PERFORCE OFF CACHE BOOL "This is forced off." FORCE)
@@ -207,12 +182,12 @@ include(FindSUtilGLUT)
 set(SAMPLES_CUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda)
 
 #########################################################
-# OPTIX_add_sample_executable
+# OPTIX_add_executable
 #
 # Convience function for adding samples to the code.  You can copy the contents of this
 # funtion into your individual project if you wish to customize the behavior.  Note that
 # in CMake, functions have their own scope, whereas macros use the scope of the caller.
-function(OPTIX_add_sample_executable target_name)
+function(OPTIX_add_executable target_name)
 
   # These calls will group PTX and CUDA files into their own directories in the Visual
   # Studio projects.
@@ -246,7 +221,7 @@ function(OPTIX_add_sample_executable target_name)
     optix
     ${optix_rpath}
     ${OPENEXR_LIBRARIES}
-    ${GLFW_LIBRARIES}
+    ${GLFW_STATIC_LIBRARIES}
   )
   if(USING_GNU_CXX)
     target_link_libraries( ${target_name} m ) # Explicitly link against math library (C samples don't do that by default)
@@ -254,20 +229,11 @@ function(OPTIX_add_sample_executable target_name)
 endfunction()
 
 #########################################################
-#  List of samples found in subdirectories.
-#
-# If you wish to start your own sample, you can copy one of the sample's directories.
-# Just make sure you rename all the occurances of the sample's name in the C code as well
-# and the CMakeLists.txt file.
-add_subdirectory(differential)
-add_subdirectory(path_tracer)
+#  List of subdirectories
+add_subdirectory(src)
 
-# Our sutil library.  The rules to build it are found in the subdirectory.
+# sutil library.  The rules to build it are found in the subdirectory.
 add_subdirectory(sutil)
-
-# nvcommon library used by isgShadows.  If you don't compile isgShadows, you can comment
-# this out.
-add_subdirectory(nvcommon)
 
 # This copies out dlls into the build directories, so that users no longer need to copy
 # them over in order to run the samples.  This depends on the cook sample being compiled.
@@ -280,7 +246,7 @@ if(WIN32)
     set(bit_dest "")
   endif()
   foreach(config ${CMAKE_CONFIGURATION_TYPES})
-    get_target_property(loc cook ${config}_LOCATION)
+    get_target_property(loc path_tracer ${config}_LOCATION)
     if(loc)
       # A little helper function
       function(copy_dll lib)
