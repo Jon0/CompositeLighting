@@ -56,43 +56,31 @@ void PathTracerScene::initScene(InitialCameraData& camera_data) {
 	m_context->setRayGenerationProgram(0, ray_gen_program);
 	Program exception_program = m_context->createProgramFromPTXFile(ptx_path, "exception");
 	m_context->setExceptionProgram(0, exception_program);
+	m_context->setMissProgram( 0, m_context->createProgramFromPTXFile( ptx_path, "miss" ) );
 
+	m_context["frame_number"]->setUint(1);
 
-  if ( outline ) {
-	  m_context->setMissProgram( 0, m_context->createProgramFromPTXFile( ptx_path, "miss2" ) );
-  }
-  else {
-	  m_context->setMissProgram( 0, m_context->createProgramFromPTXFile( ptx_path, "miss" ) );
-  }
+	// Index of sampling_stategy (BSDF, light, MIS)
+	m_sampling_strategy = 0;
+	m_context["sampling_stategy"]->setInt(m_sampling_strategy);
 
-  m_context["frame_number"]->setUint(1);
+	// Create scene geometry
+	// setup mesh programs
+	std::string mesh_ptx_path = ptxpath("path_tracer", "triangle_mesh_iterative.cu");
+	Program bounding_box = m_context->createProgramFromPTXFile(mesh_ptx_path, "mesh_bounds");
+	Program intersection = m_context->createProgramFromPTXFile(mesh_ptx_path, "mesh_intersect");
+	scene.setMeshPrograms(bounding_box, intersection);
 
-   // Index of sampling_stategy (BSDF, light, MIS)
-  m_sampling_strategy = 0;
-  m_context["sampling_stategy"]->setInt(m_sampling_strategy);
+	// material programs
+	diffuse_ch_out = m_context->createProgramFromPTXFile(ptxpath("path_tracer", "path_tracer.cu"), "diffuse_outline");
+	diffuse_ch = m_context->createProgramFromPTXFile(ptxpath("path_tracer", "path_tracer.cu"), "diffuse");
+	diffuse_ah = m_context->createProgramFromPTXFile(ptxpath("path_tracer", "path_tracer.cu"), "shadow");
+	scene.setMaterialPrograms(diffuse_ch, diffuse_ah);
+	scene.virtualGeometry(m_context, "resource");
 
-  // Create scene geometry
-  // setup mesh programs
-  std::string mesh_ptx_path = ptxpath( "path_tracer", "triangle_mesh_iterative.cu" );
-  Program bounding_box = m_context->createProgramFromPTXFile( mesh_ptx_path, "mesh_bounds" );
-  Program intersection = m_context->createProgramFromPTXFile( mesh_ptx_path, "mesh_intersect" );
-  scene.setMeshPrograms(bounding_box, intersection);
-
-  // material programs
-  diffuse_ch_out = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse_outline" );
-  diffuse_ch = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "diffuse" );
-  diffuse_ah = m_context->createProgramFromPTXFile( ptxpath( "path_tracer", "path_tracer.cu" ), "shadow" );
-  if ( outline ) {
-	  scene.setMaterialPrograms(diffuse_ch_out, diffuse_ah);
-  }
-  else {
-	  scene.setMaterialPrograms(diffuse_ch, diffuse_ah);
-  }
-  scene.virtualGeometry( m_context, "resource" );
-
-  // Finalize
-  m_context->validate();
-  m_context->compile();
+	// Finalize
+	m_context->validate();
+	m_context->compile();
 }
 
 bool PathTracerScene::keyPressed(unsigned char key, int x, int y) {

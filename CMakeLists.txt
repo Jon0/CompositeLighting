@@ -135,19 +135,13 @@ find_package(OpenEXR REQUIRED)
 if( NOT OPENEXR_FOUND )
   message( FATAL_ERROR "OpenExr is required" )
 endif()
-
-find_package(PkgConfig REQUIRED)
-pkg_search_module(GLFW REQUIRED glfw3)
-
-if( NOT GLFW_FOUND )
-  message( FATAL_ERROR "GLFW is required" )
-endif()
+add_subdirectory(lib/glfw-3.0.4)
 
 # Add the path to the OptiX headers to our include paths.
 include_directories(
   ${OptiX_INCLUDE}
   ${OPENEXR_INCLUDE_PATHS}
-  ${GLFW_INCLUDE_DIRS}
+  "${PROJECT_SOURCE_DIR}/lib/glfw-3.0.4/include"
 )
 
 # Force the perforce plugin off for the SDK.
@@ -221,7 +215,8 @@ function(OPTIX_add_executable target_name)
     optix
     ${optix_rpath}
     ${OPENEXR_LIBRARIES}
-    ${GLFW_STATIC_LIBRARIES}
+    glfw
+    ${GLFW_LIBRARIES}
   )
   if(USING_GNU_CXX)
     target_link_libraries( ${target_name} m ) # Explicitly link against math library (C samples don't do that by default)

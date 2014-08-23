@@ -22,9 +22,9 @@ Scene::Scene(int sceneType) {
 	// input camera location
 
 	// input light map
-	//lightmap_path = "/data/outside.ppm";
-	//lightmap_path = "vuw_sunny_hdr_mod1_5024.exr";
-	lightmap_path = "vuw_quad_hdr_5024.exr";
+	//lightmap_path = "resource/outside.ppm";
+	//lightmap_path = "resource/vuw_sunny_hdr_mod1_5024.exr";
+	lightmap_path = "resource/vuw_quad_hdr_5024.exr";
 
 	// input local models
 
