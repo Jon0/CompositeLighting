@@ -22,9 +22,9 @@ Scene::Scene(int sceneType) {
 	// input camera location
 
 	// input light map
-	//lightmap_path = "resource/outside.ppm";
-	lightmap_path = "resource/vuw_sunny_hdr_mod1_5024.exr";
-	//lightmap_path = "resource/vuw_quad_hdr_5024.exr";
+	//lightmap_path = "/data/outside.ppm";
+	//lightmap_path = "vuw_sunny_hdr_mod1_5024.exr";
+	lightmap_path = "vuw_quad_hdr_5024.exr";
 
 	// input local models
 
@@ -172,11 +172,28 @@ void Scene::makeMaterialPrograms( optix::Material material, const char *filename
 	//material->setAnyHitProgram( 1, ah_program );
 }
 
-optix::Material Scene::createMaterials( optix::Context &m_context, string name) {
+optix::Material Scene::createMaterials( optix::Context &m_context, string name)
+{
 	optix::Material material[1];
 	material[0] = m_context->createMaterial();
 	material[0]->setClosestHitProgram(0, diffuse_ch);
 	material[0]->setAnyHitProgram(1, diffuse_ah);
+
+//  makeMaterialPrograms( material[0], "glass.cu", "closest_hit_radiance", "any_hit_shadow");
+//
+//  material[0]["importance_cutoff"  ]->setFloat( 0.01f );
+//  material[0]["cutoff_color"       ]->setFloat( 0.2f, 0.2f, 0.2f );
+//  material[0]["fresnel_exponent"   ]->setFloat( 4.0f );
+//  material[0]["fresnel_minimum"    ]->setFloat( 0.1f );
+//  material[0]["fresnel_maximum"    ]->setFloat( 1.0f );
+//  material[0]["refraction_index"   ]->setFloat( 1.4f );
+//  material[0]["refraction_color"   ]->setFloat( 0.99f, 0.99f, 0.99f );
+//  material[0]["reflection_color"   ]->setFloat( 0.99f, 0.99f, 0.99f );
+//  material[0]["refraction_maxdepth"]->setInt( 10 );
+//  material[0]["reflection_maxdepth"]->setInt( 5 );
+//  float3 extinction = make_float3(.80f, .89f, .75f);
+//  material[0]["extinction_constant"]->setFloat( log(extinction.x), log(extinction.y), log(extinction.z) );
+//  material[0]["shadow_attenuation"]->setFloat( 1.0f, 1.0f, 1.0f );
 
   return material[0];
 }

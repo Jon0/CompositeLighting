@@ -23,64 +23,75 @@ using namespace Imf;
 using namespace std;
 using namespace optix;
 
-optix::TextureSampler loadExrTexture(const char fileName[],
-		optix::Context context, const float3& default_color) {
+optix::TextureSampler loadExrTexture( const char fileName[],
+											optix::Context context,
+                                            const float3& default_color)
+{
 	std::cout << "Reading " << fileName << std::endl;
-	Imf::Array2D < Imf::Rgba > pixels;
+	Imf::Array2D<Imf::Rgba> pixels;
 	int width;
 	int height;
 	Imf::imageio::readRgba1(fileName, pixels, width, height);
-
-	float *rgba;
-	bool hasAlpha;
-	Imf::imageio::ReadEXR(fileName, rgba, width, height, hasAlpha);
 	std::cout << "image dimensions " << width << "x" << height << std::endl;
 
-	// Create tex sampler and populate with default values
-	optix::TextureSampler sampler = context->createTextureSampler();
-	sampler->setWrapMode(0, RT_WRAP_REPEAT);
-	sampler->setWrapMode(1, RT_WRAP_REPEAT);
-	sampler->setWrapMode(2, RT_WRAP_REPEAT);
-	sampler->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-	sampler->setReadMode(RT_TEXTURE_READ_ELEMENT_TYPE);
-	sampler->setMaxAnisotropy(1.0f);
-	sampler->setMipLevelCount(1u);
-	sampler->setArraySize(1u);
+  // Create tex sampler and populate with default values
+  optix::TextureSampler sampler = context->createTextureSampler();
+  sampler->setWrapMode( 0, RT_WRAP_REPEAT );
+  sampler->setWrapMode( 1, RT_WRAP_REPEAT );
+  sampler->setWrapMode( 2, RT_WRAP_REPEAT );
+  sampler->setIndexingMode( RT_TEXTURE_INDEX_NORMALIZED_COORDINATES );
+  sampler->setReadMode( RT_TEXTURE_READ_NORMALIZED_FLOAT );
+  sampler->setMaxAnisotropy( 1.0f );
+  sampler->setMipLevelCount( 1u );
+  sampler->setArraySize( 1u );
 
-	const unsigned int nx = width;
-	const unsigned int ny = height;
+//  if ( failed() ) {
+//
+//    // Create buffer with single texel set to default_color
+//    optix::Buffer buffer = context->createBuffer( RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, 1u, 1u );
+//    unsigned char* buffer_data = static_cast<unsigned char*>( buffer->map() );
+//    buffer_data[0] = (unsigned char)clamp((int)(default_color.x * 255.0f), 0, 255);
+//    buffer_data[1] = (unsigned char)clamp((int)(default_color.y * 255.0f), 0, 255);
+//    buffer_data[2] = (unsigned char)clamp((int)(default_color.z * 255.0f), 0, 255);
+//    buffer_data[3] = 255;
+//    buffer->unmap();
+//
+//    sampler->setBuffer( 0u, 0u, buffer );
+//    // Although it would be possible to use nearest filtering here, we chose linear
+//    // to be consistent with the textures that have been loaded from a file. This
+//    // allows OptiX to perform some optimizations.
+//    sampler->setFilteringModes( RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE );
+//
+//    return sampler;
+//  }
 
-	// Create buffer and populate with PPM data
-	optix::Buffer buffer = context->createBuffer(RT_BUFFER_INPUT,
-			RT_FORMAT_FLOAT4, nx, ny);
-	float* buffer_data = static_cast<float *>(buffer->map());
+  const unsigned int nx = width;
+  const unsigned int ny = height;
 
-	for (unsigned int i = 0; i < nx; ++i) {
-		for (unsigned int j = 0; j < ny; ++j) {
+  // Create buffer and populate with PPM data
+  optix::Buffer buffer = context->createBuffer( RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, nx, ny );
+  float* buffer_data = static_cast<float *>( buffer->map() );
 
-			unsigned int ppm_index = ((ny - j - 1) * nx + (nx - i - 1));
-			unsigned int buf_index = (j * nx + i) * 4;
+  for ( unsigned int i = 0; i < nx; ++i ) {
+    for ( unsigned int j = 0; j < ny; ++j ) {
 
-//			Imf::Rgba pix = pixels[0][ppm_index];
-//			buffer_data[buf_index + 0] = pix.r;
-//			buffer_data[buf_index + 1] = pix.g;
-//			buffer_data[buf_index + 2] = pix.b;
-//			buffer_data[buf_index + 3] = 1.0f;
+      unsigned int ppm_index = ( (ny-j-1)*nx + (nx-i-1) );
+      unsigned int buf_index = ( j*nx + i )*4;
 
-			buffer_data[buf_index + 0] = rgba[ppm_index * 4 + 0];
-			buffer_data[buf_index + 1] = rgba[ppm_index * 4 + 1];
-			buffer_data[buf_index + 2] = rgba[ppm_index * 4 + 2];
-			buffer_data[buf_index + 3] = rgba[ppm_index * 4 + 3];
-		}
-	}
+      Imf::Rgba pix = pixels[0][ppm_index];
+      buffer_data[ buf_index + 0 ] = pix.r;
+      buffer_data[ buf_index + 1 ] = pix.g;
+      buffer_data[ buf_index + 2 ] = pix.b;
+      buffer_data[ buf_index + 3 ] = 1.0f;
+    }
+  }
 
-	buffer->unmap();
+  buffer->unmap();
 
-	sampler->setBuffer(0u, 0u, buffer);
-	sampler->setFilteringModes(RT_FILTER_LINEAR, RT_FILTER_LINEAR,
-			RT_FILTER_NONE);
+  sampler->setBuffer( 0u, 0u, buffer );
+  sampler->setFilteringModes( RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE );
 
-	return sampler;
+  return sampler;
 }
 
 // http://www.openexr.com/TechnicalIntroduction.pdf

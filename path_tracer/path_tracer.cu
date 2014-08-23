@@ -216,29 +216,23 @@ RT_PROGRAM void pathtrace_camera()
 	float3 pixel_color_local = getRay(local_object, 0);
 	float3 pixel_color_all = getRay(top_object, 0);
 
-
 	if (frame_number > 1) {
 		float a = 1.0f / (float) frame_number;
 		float b = ((float) frame_number - 1.0f) * a;
+		float3 old_color_all = make_float3(output_buffer_all[launch_index]);
+		output_buffer_all[launch_index] = make_float4(a * pixel_color_all + b * old_color_all, 0.0f);
 
-		//float3 old_color_all = make_float3(output_buffer_all[launch_index]);
-		//output_buffer_all[launch_index] = make_float4(a * pixel_color_all + b * old_color_all, 0.0f);
-		output_buffer_all[launch_index] = make_float4(pixel_color_all, 0.0f);
-
-		//float3 old_color_local = make_float3(output_buffer_local[launch_index]);
-		//output_buffer_local[launch_index] = make_float4(a * pixel_color_local + b * old_color_local, 0.0f);
-		output_buffer_local[launch_index] = make_float4(pixel_color_local, 0.0f);
-
-		if (frame_number < 50) {
-			float3 old_color_out = make_float3(output_buffer_virt_out[launch_index]);
-			output_buffer_virt_out[launch_index] = make_float4(a * getRay(top_object, 1) + b * old_color_out, 0.0f);
-		}
+		float3 old_color_local = make_float3(output_buffer_local[launch_index]);
+		output_buffer_local[launch_index] = make_float4(a * pixel_color_local + b * old_color_local, 0.0f);
 	} else {
+		// refresh outlines and empty scene
+		//output_buffer_empty[launch_index] = make_float4( getRay(empty_object, 0), 0.0f );
+		output_buffer_local_out[launch_index] = make_float4( getRay(local_object, 1), 0.0f );
+		output_buffer_virt_out[launch_index] = make_float4( getRay(top_object, 1), 0.0f );
+
 		// reset continuous buffers
 		output_buffer_local[launch_index] = make_float4( pixel_color_local, 0.0f );
 		output_buffer_all[launch_index] = make_float4( pixel_color_all, 0.0f );
-		output_buffer_virt_out[launch_index] = make_float4( getRay(top_object, 1), 0.0f );
-
 	}
 
 	// final output
@@ -285,69 +279,76 @@ RT_PROGRAM void diffuse_outline()
   current_prd.done = true;
 }
 
-RT_PROGRAM void diffuse() {
+RT_PROGRAM void diffuse()
+{
 
 	if (current_prd.outline == 1) {
-		current_prd.attenuation = outline_color;
-		current_prd.countEmitted = false;
-		current_prd.radiance = outline_color;
-		current_prd.done = true;
+		  current_prd.attenuation = outline_color; //make_float3(1.0f, 0.0f, 0.0f); // red
+		  current_prd.countEmitted = false;
+
+		  float3 result = outline_color; //make_float3(1.0f, 0.0f, 0.0f);
+
+		  current_prd.radiance = result;
+		  current_prd.done = true;
 		return;
 	}
-	float3 world_shading_normal   = normalize( rtTransformNormal( RT_OBJECT_TO_WORLD, shading_normal ) );
-	float3 world_geometric_normal = normalize( rtTransformNormal( RT_OBJECT_TO_WORLD, geometric_normal ) );
+  float3 world_shading_normal   = normalize( rtTransformNormal( RT_OBJECT_TO_WORLD, shading_normal ) );
+  float3 world_geometric_normal = normalize( rtTransformNormal( RT_OBJECT_TO_WORLD, geometric_normal ) );
 
-	float3 ffnormal = faceforward( world_shading_normal, -ray.direction, world_geometric_normal );
+  float3 ffnormal = faceforward( world_shading_normal, -ray.direction, world_geometric_normal );
 
-	float3 hitpoint = ray.origin + t_hit * ray.direction;
-	current_prd.origin = hitpoint;
+  float3 hitpoint = ray.origin + t_hit * ray.direction;
+  current_prd.origin = hitpoint;
 
 	// normal distribution of outgoing rays with variance of 0.5
-	//float r = sqrtf(0.5 * -2 * logf ( rnd(current_prd.seed) ) ) * cosf(2*M_PIf*rnd(current_prd.seed));
+  //float r = sqrtf(0.5 * -2 * logf ( rnd(current_prd.seed) ) ) * cosf(2*M_PIf*rnd(current_prd.seed));
 
-	float z1 = rnd(current_prd.seed); // 0.5 + r/2;
-	float z2 = rnd(current_prd.seed);
-	float3 p;
-	cosine_sample_hemisphere(z1, z2, p);
-	float3 v1, v2;
-	createONB(ffnormal, v1, v2);
-	current_prd.direction = v1 * p.x + v2 * p.y + ffnormal * p.z;
-	float3 normal_color = (normalize(world_shading_normal) * 0.5f + 0.5f) * 0.9;
-	current_prd.attenuation = current_prd.attenuation * diffuse_color; // use the diffuse_color as the diffuse response
-	current_prd.countEmitted = false;
+  float z1= rnd(current_prd.seed); // 0.5 + r/2;
+  float z2= rnd(current_prd.seed);
+  float3 p;
+  cosine_sample_hemisphere(z1, z2, p);
+  float3 v1, v2;
+  createONB(ffnormal, v1, v2);
+  current_prd.direction = v1 * p.x + v2 * p.y + ffnormal * p.z;
+  float3 normal_color = (normalize(world_shading_normal)*0.5f + 0.5f)*0.9;
+  current_prd.attenuation = current_prd.attenuation * diffuse_color; // use the diffuse_color as the diffuse response
+  current_prd.countEmitted = false;
 
-	// Compute light...
-	float3 result = make_float3(0.0f);
-	current_prd.radiance = result;
+  // Compute light...
+  float3 result = make_float3(0.0f);
+  current_prd.radiance = result;
 }
 
 rtDeclareVariable(float3,        glass_color, , );
 rtDeclareVariable(float,         index_of_refraction, , );
 
-RT_PROGRAM void glass_refract() {
-	float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
-	float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
-	float3 ffnormal = faceforward(world_shading_normal, -ray.direction, world_geometric_normal);
+RT_PROGRAM void glass_refract()
+{
+  float3 world_shading_normal   = normalize( rtTransformNormal( RT_OBJECT_TO_WORLD, shading_normal ) );
+  float3 world_geometric_normal = normalize( rtTransformNormal( RT_OBJECT_TO_WORLD, geometric_normal ) );
 
-	float3 hitpoint = ray.origin + t_hit * ray.direction;
-	current_prd.origin = hitpoint;
-	current_prd.countEmitted = true;
-	float iof;
-	if (current_prd.inside) {
-		// Shoot outgoing ray
-		iof = 1.0f / index_of_refraction;
-	} else {
-		iof = index_of_refraction;
-	}
-	refract(current_prd.direction, ray.direction, ffnormal, iof);
-	//prd.direction = reflect(ray.direction, ffnormal);
+  float3 ffnormal = faceforward( world_shading_normal, -ray.direction, world_geometric_normal );
 
-	if (current_prd.inside) {
-		// Compute Beer's law
-		current_prd.attenuation = current_prd.attenuation * powf(glass_color, t_hit);
-	}
-	current_prd.inside = !current_prd.inside;
-	current_prd.radiance = make_float3(0.0f);
+  float3 hitpoint = ray.origin + t_hit * ray.direction;
+  current_prd.origin = hitpoint;
+  current_prd.countEmitted = true;
+  float iof;
+  if (current_prd.inside) {
+    // Shoot outgoing ray
+    iof = 1.0f/index_of_refraction;
+  } else {
+    iof = index_of_refraction;
+  }
+  refract(current_prd.direction, ray.direction, ffnormal, iof);
+  //prd.direction = reflect(ray.direction, ffnormal);
+
+  if (current_prd.inside) {
+    // Compute Beer's law
+    current_prd.attenuation = current_prd.attenuation * powf(glass_color, t_hit);
+  }
+  current_prd.inside = !current_prd.inside;
+
+  current_prd.radiance = make_float3(0.0f);
 }
 
 //-----------------------------------------------------------------------------
@@ -367,27 +368,29 @@ RT_PROGRAM void exception()
 //
 //-----------------------------------------------------------------------------
 rtTextureSampler<float4, 2> envmap;
-RT_PROGRAM void miss() {
+RT_PROGRAM void miss()
+{
 
 	if (current_prd.outline == 1) {
-		current_prd.radiance = bg_color;
-		current_prd.done = true;
+		  current_prd.radiance = bg_color;
+		  current_prd.done = true;
 		return;
 	}
 
 	// sample the light map
-	float theta = atan2f(ray.direction.x, ray.direction.z);
-	float phi = M_PIf * 0.5f - acosf(ray.direction.y);
-	float u = (theta + M_PIf) * (0.5f * M_1_PIf);
-	float v = 0.5f * (1.0f + sin(phi));
-	float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
+  float theta = atan2f( ray.direction.x, ray.direction.z );
+  float phi   = M_PIf * 0.5f -  acosf( ray.direction.y );
+  float u     = (theta + M_PIf) * (0.5f * M_1_PIf);
+  float v     = 0.5f * ( 1.0f + sin(phi) );
+  float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
+  emap = 5.0f * (emap + 2.0f * powf(emap, 7.0f));
 
-	current_prd.radiance = emap;
-	current_prd.done = true;
+  current_prd.radiance = emap;
+  current_prd.done = true;
 
-	//HitRecord& rec = rtpass_output_buffer[launch_index];
-	//rec.flags = 0u;
-	//rec.attenuated_Kd = hit_prd.attenuation * result;
+  //HitRecord& rec = rtpass_output_buffer[launch_index];
+  //rec.flags = 0u;
+  //rec.attenuated_Kd = hit_prd.attenuation * result;
 }
 
 RT_PROGRAM void miss2()
