@@ -221,13 +221,11 @@ RT_PROGRAM void pathtrace_camera()
 		float a = 1.0f / (float) frame_number;
 		float b = ((float) frame_number - 1.0f) * a;
 
-		//float3 old_color_all = make_float3(output_buffer_all[launch_index]);
-		//output_buffer_all[launch_index] = make_float4(a * pixel_color_all + b * old_color_all, 0.0f);
-		output_buffer_all[launch_index] = make_float4(pixel_color_all, 0.0f);
+		float3 old_color_all = make_float3(output_buffer_all[launch_index]);
+		output_buffer_all[launch_index] = make_float4(a * pixel_color_all + b * old_color_all, 0.0f);
 
-		//float3 old_color_local = make_float3(output_buffer_local[launch_index]);
-		//output_buffer_local[launch_index] = make_float4(a * pixel_color_local + b * old_color_local, 0.0f);
-		output_buffer_local[launch_index] = make_float4(pixel_color_local, 0.0f);
+		float3 old_color_local = make_float3(output_buffer_local[launch_index]);
+		output_buffer_local[launch_index] = make_float4(a * pixel_color_local + b * old_color_local, 0.0f);
 
 		if (frame_number < 50) {
 			float3 old_color_out = make_float3(output_buffer_virt_out[launch_index]);
@@ -288,7 +286,6 @@ RT_PROGRAM void diffuse_outline()
 RT_PROGRAM void diffuse() {
 
 	if (current_prd.outline == 1) {
-		current_prd.attenuation = outline_color;
 		current_prd.countEmitted = false;
 		current_prd.radiance = outline_color;
 		current_prd.done = true;
@@ -381,13 +378,9 @@ RT_PROGRAM void miss() {
 	float u = (theta + M_PIf) * (0.5f * M_1_PIf);
 	float v = 0.5f * (1.0f + sin(phi));
 	float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-
+	emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
 	current_prd.radiance = emap;
 	current_prd.done = true;
-
-	//HitRecord& rec = rtpass_output_buffer[launch_index];
-	//rec.flags = 0u;
-	//rec.attenuated_Kd = hit_prd.attenuation * result;
 }
 
 RT_PROGRAM void miss2()

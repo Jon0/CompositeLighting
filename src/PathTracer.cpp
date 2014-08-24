@@ -36,7 +36,7 @@ void PathTracerScene::initScene(InitialCameraData& camera_data) {
 	camera_data = InitialCameraData( make_float3( -42.067986f, 13.655909f, -7.266403f ), // eye
                                      make_float3( 0.938559f, -0.304670f, 0.162117f ),    // lookat
                                      make_float3( 0.300224f, 0.952457f, 0.051857f ),       // up
-                                     32.0f ); // vfov
+                                     32.22f ); // vfov
 
 	// Declare these so validation will pass
 	m_context["eye"]->setFloat(make_float3(0.0f, 0.0f, 0.0f));
