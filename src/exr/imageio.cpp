@@ -61,19 +61,18 @@ optix::TextureSampler loadExrTexture(const char fileName[],
 			unsigned int ppm_index = ((ny - j - 1) * nx + (nx - i - 1));
 			unsigned int buf_index = (j * nx + i) * 4;
 
-//			Imf::Rgba pix = pixels[0][ppm_index];
-//			buffer_data[buf_index + 0] = pix.r;
-//			buffer_data[buf_index + 1] = pix.g;
-//			buffer_data[buf_index + 2] = pix.b;
-//			buffer_data[buf_index + 3] = 1.0f;
+			Imf::Rgba pix = pixels[ny - j - 1][nx - i - 1];
+			buffer_data[buf_index + 0] = pix.r;
+			buffer_data[buf_index + 1] = pix.g;
+			buffer_data[buf_index + 2] = pix.b;
+			buffer_data[buf_index + 3] = 1.0f;
 
-			buffer_data[buf_index + 0] = rgba[ppm_index * 4 + 0];
-			buffer_data[buf_index + 1] = rgba[ppm_index * 4 + 1];
-			buffer_data[buf_index + 2] = rgba[ppm_index * 4 + 2];
-			buffer_data[buf_index + 3] = rgba[ppm_index * 4 + 3];
+//			buffer_data[buf_index + 0] = rgba[ppm_index * 4 + 0];
+//			buffer_data[buf_index + 1] = rgba[ppm_index * 4 + 1];
+//			buffer_data[buf_index + 2] = rgba[ppm_index * 4 + 2];
+//			buffer_data[buf_index + 3] = rgba[ppm_index * 4 + 3];
 		}
 	}
-
 	buffer->unmap();
 
 	sampler->setBuffer(0u, 0u, buffer);

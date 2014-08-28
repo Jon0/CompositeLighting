@@ -16,70 +16,64 @@
 
 namespace std {
 
-Scene::Scene(int sceneType) {
+Scene::Scene() {
 	float scale = 1.0f;
 
 	// input camera location
 
 	// input light map
 	//lightmap_path = "resource/outside.ppm";
-	//lightmap_path = "resource/vuw_sunny_hdr_mod1_5024.exr";
+	//lightmap_path = "resource/ennis.exr";
 	lightmap_path = "resource/vuw_quad_hdr_5024.exr";
 
 	// input local models
-
-	local_models.push_back(Model{"/base.obj", { scale, 0, 0, 0,
-			0, scale, 0, 0,
-			0, 0, scale, 0,
-			0, 0, 0, scale },
-			optix::make_float3( 0.9f, 0.9f, 0.9f )});
-	local_models.push_back(Model{"/ycube.obj", { scale, 0, 0, 0,
-			0, scale, 0, 0,
-			0, 0, scale, 0,
-			0, 0, 0, scale },
-			optix::make_float3( 1.0f, 0.913f, 0.137f )});
-	local_models.push_back(Model{"/bcyl.obj", { scale, 0, 0, 0,
-			0, scale, 0, 0,
-			0, 0, scale, 0,
-			0, 0, 0, scale },
-			optix::make_float3( 0.131f, 0.331f, 0.745f )});
-	local_models.push_back(Model{"/gpipe.obj", { scale, 0, 0, 0,
-			0, scale, 0, 0,
-			0, 0, scale, 0,
-			0, 0, 0, scale },
-			optix::make_float3( 0.031f, 0.804f, 0.101f )});
-	local_models.push_back(Model{"/bpln.obj", { scale, 0, 0, 0,
-			0, scale, 0, 0,
-			0, 0, scale, 0,
-			0, 0, 0, scale },
-			optix::make_float3( 0.08f, 0.08f, 0.08f )});
+	addModel(local_models, "/base.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.9f, 0.9f, 0.9f ));
+	addModel(local_models, "/ycube.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 1.0f, 0.913f, 0.137f ));
+	addModel(local_models, "/bcyl.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.131f, 0.331f, 0.745f ));
+	addModel(local_models, "/gpipe.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.031f, 0.804f, 0.101f ));
+	addModel(local_models, "/bpln.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.08f, 0.08f, 0.08f ));
 
 	// input virtual models
-	models.push_back(Model{"/cognacglass.obj", { scale, 0, 0, 0,
-			0, scale, 0, 0,
-			0, 0, scale,-8 * scale,
-			0, 0, 0, 1 * scale },
-			optix::make_float3( 0.9f, 0.9f, 0.9f )});
-	models.push_back(Model{"/wineglass.obj", { scale,  0,  0,  0,
-            0,  scale,  0,  0,
-            0,  0,  scale,  0,
-            0,  0,  0,  1*scale },
-			optix::make_float3( 0.3f, 0.8f, 0.3f )});
-	models.push_back(Model{"/waterglass.obj", { scale,  0,  0, -5*scale,
-            0,  scale,  0,  0,
-            0,  0,  scale,  1*scale,
-            0,  0,  0,  1*scale },
-			optix::make_float3( 0.8f, 0.4f, 0.05f )});
-	models.push_back(Model{"/dragon.obj", { 20*scale,  0,  0, -6*scale,
-	            0,  20*scale,  0,  5.7*scale,
-	            0,  0,  20*scale,  20*scale,
-	            0,  0,  0,  1*scale },
-				optix::make_float3( 0.3f, 0.4f, 0.85f )});
-
+	addModel(models, "/cognacglass.obj", scale, scale * optix::make_float3( 0.0f, 0.0f, -8.0f ),
+			optix::make_float3( 0.9f, 0.9f, 0.9f ));
+	addModel(models, "/wineglass.obj", scale, scale * optix::make_float3( 0.0f, 0.0f, 1.0f ),
+			optix::make_float3( 0.3f, 0.8f, 0.3f ));
+	addModel(models, "/waterglass.obj", scale, scale * optix::make_float3( -5.0f, 0.0f, 1.0f ),
+			optix::make_float3( 0.8f, 0.4f, 0.05f ));
+	addModel(models, "/dragon.obj", 20*scale, scale * optix::make_float3( -6.0f, 5.7f, 20.0f ),
+			optix::make_float3( 0.3f, 0.4f, 0.85f ));
 }
 
 Scene::~Scene() {
 	// TODO Auto-generated destructor stub
+}
+
+void Scene::init(optix::Context &m_context) {
+	context = optix::Context(m_context);
+	maingroup = context->createGroup();
+	localgroup = context->createGroup();
+	virtgroup = context->createGroup();
+	emptygroup = context->createGroup();
+}
+
+void Scene::addModel(vector<Model> &set, string fname, float scale, optix::float3 pos, optix::float3 c) {
+	Model m;
+	m.filepath = fname;
+	float f[4*4] = {
+			scale,  0,  0, 	0.0f,
+            0,  scale,  0,  0.0f,
+            0,  0,  scale,  0.0f,
+            0,  0,  0,  scale
+	};
+	m.transform = optix::Matrix4x4(f);
+	m.colour = c;
+	m.position = pos;
+	set.push_back(m);
 }
 
 void Scene::setMeshPrograms( optix::Program bb, optix::Program inter) {
@@ -92,66 +86,87 @@ void Scene::setMaterialPrograms( optix::Program ch, optix::Program ah ) {
 	diffuse_ah = ah;
 }
 
-void Scene::virtualGeometry( optix::Context &m_context, const std::string& path ) {
-	optix::Material material = createMaterials(m_context, "diffuse");
+void Scene::modify() {
+	for (int i = 0; i < models.size(); ++i) {
+
+		models[i].position.y += 1.0f;
+		setPosition(models[i].tr, models[i].position);
+	}
+
+	maingroup->getAcceleration()->markDirty();
+	virtgroup->getAcceleration()->markDirty();
+}
+
+void Scene::virtualGeometry( const std::string& path ) {
+	optix::Material material = createMaterials(context, "diffuse");
 
 	std::string full_path = std::string( sutilSamplesDir() ) + lightmap_path;
 	const optix::float3 default_color = optix::make_float3( 0.8f, 0.88f, 0.97f );
-	m_context["envmap"]->setTextureSampler( loadExrTexture( lightmap_path.c_str(), m_context, default_color) );
+	context["envmap"]->setTextureSampler( loadExrTexture( lightmap_path.c_str(), context, default_color) );
 
 	// Load OBJ files and set as geometry groups
 	cout << "reading " << (local_models.size() + models.size()) << " models" << endl;
-
-
-	optix::GeometryGroup maingroup = m_context->createGeometryGroup();
 	maingroup->setChildCount( local_models.size() + models.size() );
-	optix::GeometryGroup localgroup = m_context->createGeometryGroup();
 	localgroup->setChildCount( local_models.size() );
-	optix::GeometryGroup virtgroup = m_context->createGeometryGroup();
 	virtgroup->setChildCount( models.size() );
-	optix::GeometryGroup emptygroup = m_context->createGeometryGroup();
 	emptygroup->setChildCount( 0 );
 
 	// setup each model
 	for (int i = 0; i < models.size(); ++i) {
-		optix::GeometryInstance gi = makeGeometry(m_context, path, models[i], material);
+		optix::GeometryInstance gi = makeGeometry(context, path, models[i], material);
 		optix::Variable v = gi->declareVariable("outline_color");
 		v->set3fv(new float[3]{1.0, 0.0, 0.0});
-		maingroup->setChild(i, gi);
-		virtgroup->setChild(i, gi);
+		maingroup->setChild(i, models[i].tr);
+		virtgroup->setChild(i, models[i].tr);
 	}
+
 
 	// local models go in both groups
 	for (int i = 0; i < local_models.size(); ++i) {
-		optix::GeometryInstance gi = makeGeometry(m_context, path, local_models[i], material);
+		optix::GeometryInstance gi = makeGeometry(context, path, local_models[i], material);
 		optix::Variable v = gi->declareVariable("outline_color");
 		v->set3fv(new float[3]{0.0, 1.0, 0.0});
-		maingroup->setChild(models.size() + i, gi);
-		localgroup->setChild(i, gi);
+		maingroup->setChild(models.size() + i, local_models[i].tr);
+		localgroup->setChild(i, local_models[i].tr);
 	}
 
-	maingroup->setAcceleration(m_context->createAcceleration("Bvh", "Bvh")); // BvhSingle
-	localgroup->setAcceleration(m_context->createAcceleration("Bvh", "Bvh"));
-	virtgroup->setAcceleration(m_context->createAcceleration("Bvh", "Bvh"));
-	emptygroup->setAcceleration(m_context->createAcceleration("Bvh", "Bvh"));
-	m_context["top_object"]->set(maingroup);
-	m_context["local_object"]->set(localgroup);
-	m_context["virt_object"]->set(virtgroup);
-	m_context["empty_object"]->set(emptygroup);
+	maingroup->setAcceleration(context->createAcceleration("Bvh", "Bvh")); // MedianBvh, BvhSingle
+	localgroup->setAcceleration(context->createAcceleration("Bvh", "Bvh"));
+	virtgroup->setAcceleration(context->createAcceleration("Bvh", "Bvh"));
+	emptygroup->setAcceleration(context->createAcceleration("Bvh", "Bvh"));
+	context["top_object"]->set(maingroup);
+	context["local_object"]->set(localgroup);
+	context["virt_object"]->set(virtgroup);
+	context["empty_object"]->set(emptygroup);
 }
 
-optix::GeometryInstance Scene::makeGeometry( optix::Context &m_context, const std::string& path, Model model, optix::Material material ) {
+optix::GeometryInstance Scene::makeGeometry( optix::Context &m_context, const std::string& path, Model &model, optix::Material material ) {
 	optix::GeometryGroup model_group = m_context->createGeometryGroup();
-
-	const optix::Matrix4x4 m(model.transform);
 	ObjLoader objloader0((path + model.filepath).c_str(), m_context,
 			model_group, material);
 	objloader0.setIntersectProgram(m_pgram_intersection);
-	objloader0.load(m);
+	objloader0.load(model.transform);
+
+
+	model.tr = context->createTransform();
+	model.tr->setChild(model_group);
+	setPosition(model.tr, model.position);
+
 
 	optix::GeometryInstance gi = model_group->getChild(0);
 	setMaterial(gi, material, "diffuse_color", model.colour);
 	return gi;
+}
+
+void Scene::setPosition(optix::Transform &t, optix::float3 p) {
+	float mod[4*4] = {
+			1,  0,  0,	p.x,
+            0,  1,  0,  p.y,
+            0,  0,  1,  p.z,
+            0,  0,  0,  1.0
+	};
+	const optix::Matrix4x4 id(mod);
+	t->setMatrix( false, id.getData(), 0 );
 }
 
 void Scene::setMaterial( optix::GeometryInstance& gi,

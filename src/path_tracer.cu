@@ -211,8 +211,7 @@ static __device__ float4 getDifferential() {
 //  Camera program -- main ray tracing loop
 //
 //-----------------------------------------------------------------------------
-RT_PROGRAM void pathtrace_camera()
-{
+RT_PROGRAM void pathtrace_camera() {
 	float3 pixel_color_local = getRay(local_object, 0);
 	float3 pixel_color_all = getRay(top_object, 0);
 
@@ -247,12 +246,9 @@ RT_PROGRAM void pathtrace_camera()
 		output_buffer[launch_index] = output_buffer_local[launch_index];
 	}
 	else if (display_mode == 3) {
-		output_buffer[launch_index] = output_buffer_local_out[launch_index];
-	}
-	else if (display_mode == 4) {
 		output_buffer[launch_index] = output_buffer_virt_out[launch_index];
 	}
-	else if (display_mode == 5) {
+	else if (display_mode == 4) {
 		output_buffer[launch_index] = output_buffer_empty[launch_index];
 	}
 	else {
@@ -302,20 +298,28 @@ RT_PROGRAM void diffuse() {
 	// normal distribution of outgoing rays with variance of 0.5
 	//float r = sqrtf(0.5 * -2 * logf ( rnd(current_prd.seed) ) ) * cosf(2*M_PIf*rnd(current_prd.seed));
 
-	float z1 = rnd(current_prd.seed); // 0.5 + r/2;
-	float z2 = rnd(current_prd.seed);
-	float3 p;
-	cosine_sample_hemisphere(z1, z2, p);
-	float3 v1, v2;
-	createONB(ffnormal, v1, v2);
-	current_prd.direction = v1 * p.x + v2 * p.y + ffnormal * p.z;
+	//float ref = rnd(current_prd.seed);
+
+	//if (ref < 0.0) {
+		//float3 R = reflect( current_prd.direction, ffnormal );
+		//current_prd.direction = R;
+	//}
+	//else {
+		float z1 = rnd(current_prd.seed); // 0.5 + r/2;
+		float z2 = rnd(current_prd.seed);
+		float3 p;
+		cosine_sample_hemisphere(z1, z2, p);
+		float3 v1, v2;
+		createONB(ffnormal, v1, v2);
+		current_prd.direction = v1 * p.x + v2 * p.y + ffnormal * p.z;
+	//}
+
 	float3 normal_color = (normalize(world_shading_normal) * 0.5f + 0.5f) * 0.9;
 	current_prd.attenuation = current_prd.attenuation * diffuse_color; // use the diffuse_color as the diffuse response
 	current_prd.countEmitted = false;
 
 	// Compute light...
-	float3 result = make_float3(0.0f);
-	current_prd.radiance = result;
+	current_prd.radiance = make_float3(0.0f);
 }
 
 rtDeclareVariable(float3,        glass_color, , );
@@ -378,7 +382,7 @@ RT_PROGRAM void miss() {
 	float u = (theta + M_PIf) * (0.5f * M_1_PIf);
 	float v = 0.5f * (1.0f + sin(phi));
 	float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-	emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
+	//emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
 	current_prd.radiance = emap;
 	current_prd.done = true;
 }

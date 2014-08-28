@@ -40,15 +40,14 @@ namespace std {
 class PathTracerScene: public SampleScene {
 public:
   // Set the actual render parameters below in main().
-  PathTracerScene(int sceneType, bool o)
+  PathTracerScene()
   : m_rr_begin_depth(1u)
   , m_max_depth(100u)
   , m_sqrt_num_samples( 0u )
   , m_width(512u)
   , m_height(512u)
-  , scene(sceneType) {
+  , scene() {
 	lightmap_y_rot = 0.28f;
-	outline = o;
   }
 
   virtual void   initScene( InitialCameraData& camera_data );
@@ -78,8 +77,6 @@ private:
 
   Scene scene;
   Renderer final, empty, local, all, local_out, virt_out;
-
-  bool outline;
 };
 } /* namespace std */
 

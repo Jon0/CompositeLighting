@@ -28,7 +28,7 @@ void PathTracerScene::initScene(InitialCameraData& camera_data) {
 	final.init(m_context, "output_buffer", m_width, m_height, true);
 	local.init(m_context, "output_buffer_local", m_width, m_height, false);
 	all.init(m_context, "output_buffer_all", m_width, m_height, false);
-	local_out.init(m_context, "output_buffer_local_out", m_width, m_height, false);
+	local_out.init(m_context, "output_buffer_local_out", m_width, m_height, false);// no longer used
 	virt_out.init(m_context, "output_buffer_virt_out", m_width, m_height, false);
 	empty.init(m_context, "output_buffer_empty", "resource/ot.ppm");	// load photo from ppm file
 
@@ -49,16 +49,16 @@ void PathTracerScene::initScene(InitialCameraData& camera_data) {
 	m_context["bg_color"]->setFloat(make_float3(0.0f));
 
 	m_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
+	m_context["frame_number"]->setUint(1);
 
 	// Setup programs
 	std::string ptx_path = ptxpath("path_tracer", "path_tracer.cu");
 	Program ray_gen_program = m_context->createProgramFromPTXFile(ptx_path, "pathtrace_camera");
-	m_context->setRayGenerationProgram(0, ray_gen_program);
 	Program exception_program = m_context->createProgramFromPTXFile(ptx_path, "exception");
+	m_context->setRayGenerationProgram(0, ray_gen_program);
 	m_context->setExceptionProgram(0, exception_program);
 	m_context->setMissProgram( 0, m_context->createProgramFromPTXFile( ptx_path, "miss" ) );
 
-	m_context["frame_number"]->setUint(1);
 
 	// Index of sampling_stategy (BSDF, light, MIS)
 	m_sampling_strategy = 0;
@@ -69,6 +69,7 @@ void PathTracerScene::initScene(InitialCameraData& camera_data) {
 	std::string mesh_ptx_path = ptxpath("path_tracer", "triangle_mesh_iterative.cu");
 	Program bounding_box = m_context->createProgramFromPTXFile(mesh_ptx_path, "mesh_bounds");
 	Program intersection = m_context->createProgramFromPTXFile(mesh_ptx_path, "mesh_intersect");
+	scene.init(m_context);
 	scene.setMeshPrograms(bounding_box, intersection);
 
 	// material programs
@@ -76,7 +77,7 @@ void PathTracerScene::initScene(InitialCameraData& camera_data) {
 	diffuse_ch = m_context->createProgramFromPTXFile(ptxpath("path_tracer", "path_tracer.cu"), "diffuse");
 	diffuse_ah = m_context->createProgramFromPTXFile(ptxpath("path_tracer", "path_tracer.cu"), "shadow");
 	scene.setMaterialPrograms(diffuse_ch, diffuse_ah);
-	scene.virtualGeometry(m_context, "resource");
+	scene.virtualGeometry("resource");
 
 	// Finalize
 	m_context->validate();
@@ -86,19 +87,18 @@ void PathTracerScene::initScene(InitialCameraData& camera_data) {
 bool PathTracerScene::keyPressed(unsigned char key, int x, int y) {
 	//std::cout << lightmap_y_rot << std::endl;
 	if (key == 'j') {
-		m_frame = 1;
-		m_context["frame_number"]->setUint(m_frame++);
+		m_camera_changed = true;
 		lightmap_y_rot += 0.01;
 		m_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
 		return true;
 	} else if (key == 'k') {
-		m_frame = 1;
-		m_context["frame_number"]->setUint(m_frame++);
+		m_camera_changed = true;
 		lightmap_y_rot -= 0.01;
 		m_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
 		return true;
 	} else if (key == 'q') {
-		m_context["display_mode"]->setUint(0);
+		m_camera_changed = true;
+		scene.modify();
 		return true;
 	} else if (isdigit(key)) {
 		unsigned int newmode = key - '0';

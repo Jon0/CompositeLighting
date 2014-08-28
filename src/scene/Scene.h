@@ -19,21 +19,29 @@ namespace std {
 
 struct Model {
 	string filepath;
-	float transform[4*4];
+	optix::Matrix4x4 transform; // initial value
+	optix::Transform tr;		// updated value
 	optix::float3 colour;
+	optix::float3 position;
 };
 
 class Scene {
 public:
-	Scene(int);
+	Scene();
 	virtual ~Scene();
+
+	void init(optix::Context &);
+	void addModel(vector<Model> &, string fname, float scale, optix::float3 pos, optix::float3 c);
 
 	void setMeshPrograms( optix::Program, optix::Program );
 	void setMaterialPrograms( optix::Program, optix::Program );
 
-	void virtualGeometry( optix::Context &m_context, const std::string& path );
+	void modify();
+	void virtualGeometry( const std::string& path );
 
-	optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, Model, optix::Material);
+	optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, Model &, optix::Material);
+
+	void setPosition(optix::Transform &, optix::float3);
 
 	void setMaterial( optix::GeometryInstance& gi,
 						optix::Material material,
@@ -47,15 +55,21 @@ public:
 	optix::Material createMaterials(optix::Context &m_context, string);
 
 private:
-	  vector<Model> models, local_models;
+	optix::Context context;
+	vector<Model> models, local_models;
 
-	  optix::Program m_pgram_bounding_box;
-	  optix::Program m_pgram_intersection;
+	optix::Group maingroup;
+	optix::Group localgroup;
+	optix::Group virtgroup;
+	optix::Group emptygroup;
 
-	  optix::Program diffuse_ch;
-	  optix::Program diffuse_ah;
+	optix::Program m_pgram_bounding_box;
+	optix::Program m_pgram_intersection;
 
-	  string lightmap_path;
+	optix::Program diffuse_ch;
+	optix::Program diffuse_ah;
+
+	string lightmap_path;
 };
 
 } /* namespace std */

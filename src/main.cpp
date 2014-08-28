@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 	float timeout = 0.0f;
 
 	try {
-		PathTracerScene scene(sceneType, outline);
+		PathTracerScene scene;
 		scene.setNumSamples(sqrt_num_samples);
 		scene.setDimensions(width, height);
 		GLUTDisplay::setProgressiveDrawingTimeout(timeout);
