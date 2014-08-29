@@ -98,7 +98,11 @@ bool PathTracerScene::keyPressed(unsigned char key, int x, int y) {
 		return true;
 	} else if (key == 'q') {
 		m_camera_changed = true;
-		scene.modify();
+		scene.modify(1.0f);
+		return true;
+	} else if (key == 'w') {
+		m_camera_changed = true;
+		scene.modify(-1.0f);
 		return true;
 	} else if (isdigit(key)) {
 		unsigned int newmode = key - '0';

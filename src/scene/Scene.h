@@ -36,7 +36,7 @@ public:
 	void setMeshPrograms( optix::Program, optix::Program );
 	void setMaterialPrograms( optix::Program, optix::Program );
 
-	void modify();
+	void modify(float k);
 	void virtualGeometry( const std::string& path );
 
 	optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, Model &, optix::Material);

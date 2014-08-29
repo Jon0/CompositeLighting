@@ -86,10 +86,9 @@ void Scene::setMaterialPrograms( optix::Program ch, optix::Program ah ) {
 	diffuse_ah = ah;
 }
 
-void Scene::modify() {
+void Scene::modify(float k) {
 	for (int i = 0; i < models.size(); ++i) {
-
-		models[i].position.y += 1.0f;
+		models[i].position.y += k;
 		setPosition(models[i].tr, models[i].position);
 	}
 
@@ -172,10 +171,9 @@ void Scene::setPosition(optix::Transform &t, optix::float3 p) {
 void Scene::setMaterial( optix::GeometryInstance& gi,
 									optix::Material material,
                                    const std::string& color_name,
-                                   const optix::float3& color)
-{
-  gi->addMaterial(material);
-  gi[color_name]->setFloat(color);
+                                   const optix::float3& color) {
+	gi->addMaterial(material);
+	gi[color_name]->setFloat(color);
 }
 
 void Scene::makeMaterialPrograms( optix::Material material, const char *filename,

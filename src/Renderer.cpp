@@ -39,6 +39,7 @@ void Renderer::init(optix::Context &m_context, string name, string file) {
 	buf_name = name;
 	format = RT_FORMAT_FLOAT4;
 
+	// loading ppm image into optix buffer
 	PPMLoader ppm(file, false);
 	width = ppm.width();
 	height = ppm.height();
