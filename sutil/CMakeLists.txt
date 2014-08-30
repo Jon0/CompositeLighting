@@ -64,12 +64,12 @@ set(sources
   )
 
 if(OPENGL_FOUND AND NOT APPLE)
-  list(APPEND sources "glew.c" "GL/glew.h")
-  if( WIN32 )
-    list(APPEND sources "GL/wglew.h")
-  else()
-    list(APPEND sources "GL/glxew.h")
-  endif()
+#  list(APPEND sources "glew.c" "GL/glew.h")
+#  if( WIN32 )
+#    list(APPEND sources "GL/wglew.h")
+#  else()
+#    list(APPEND sources "GL/glxew.h")
+#  endif()
 
   if( WIN32 )
     add_definitions(-DGLEW_BUILD)

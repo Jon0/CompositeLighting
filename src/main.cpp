@@ -30,27 +30,35 @@ using namespace optix;
 // main
 //
 //-----------------------------------------------------------------------------
-int main(int argc, char** argv) {
-	GLUTDisplay::init(argc, argv);
-	//Display d;
+PathTracer pt;
 
-	// Process command line options
-	int sceneType = 2;
-	bool outline = false;
-	unsigned int sqrt_num_samples = 1u;
-	unsigned int width = 960u, height = 540u;
-	float timeout = 0.0f;
-
+void useGLUT(int argc, char** argv) {
 	try {
-		PathTracerScene scene;
-		scene.setNumSamples(sqrt_num_samples);
-		scene.setDimensions(width, height);
-		GLUTDisplay::setProgressiveDrawingTimeout(timeout);
+
+		GLUTDisplay::setProgressiveDrawingTimeout(0.0f);
 		GLUTDisplay::setUseSRGB(false);
-		GLUTDisplay::run(argv[0], &scene, GLUTDisplay::CDProgressive);
+		GLUTDisplay::run(argv[0], &pt, GLUTDisplay::CDProgressive);
 	} catch (Exception& e) {
 		sutilReportError(e.getErrorString().c_str());
 		exit(1);
 	}
+}
+
+int main(int argc, char** argv) {
+	GLUTDisplay::init(argc, argv);
+	//Display d(960, 540);
+
+	// Process command line options
+	shared_ptr<Scene> scene = make_shared<Scene>();
+	scene->loadConfig("config.txt");
+
+	pt.initScene(scene);
+
+	// pass output buffer to display
+
+	useGLUT(argc, argv);
+
+	//d.run();
+
 	return 0;
 }

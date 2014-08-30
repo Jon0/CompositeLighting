@@ -135,17 +135,29 @@ find_package(OpenEXR REQUIRED)
 if( NOT OPENEXR_FOUND )
   message( FATAL_ERROR "OpenExr is required" )
 endif()
+
+set(GLEW_SOURCE "${CMAKE_SOURCE_DIR}/lib/glew-1.10.0/src/glew.c")
 add_subdirectory(lib/glfw-3.0.4)
+add_subdirectory(lib/glm)
 
 # Add the path to the OptiX headers to our include paths.
 include_directories(
   ${OptiX_INCLUDE}
   ${OPENEXR_INCLUDE_PATHS}
-  "${PROJECT_SOURCE_DIR}/lib/glfw-3.0.4/include"
+  "${CMAKE_SOURCE_DIR}/lib"
+  "${PROJECT_SOURCE_DIR}/lib/glew-1.10.0/include"
+  "${CMAKE_SOURCE_DIR}/lib/glfw-3.0.4/include"
+)
+
+add_library( glew STATIC
+	${GLEW_SOURCE}
 )
 
 # Force the perforce plugin off for the SDK.
 set(USE_PERFORCE OFF CACHE BOOL "This is forced off." FORCE)
+
+# use c++11
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 ##################################################################
 # SUtil compilation
@@ -206,7 +218,7 @@ function(OPTIX_add_executable target_name)
     ${source_files}
     ${generated_files}
     ${cmake_options}
-    )
+  )
 
   # Most of the samples link against the sutil library and the optix library.  Here is the
   # rule that specifies this linkage.
@@ -215,6 +227,7 @@ function(OPTIX_add_executable target_name)
     optix
     ${optix_rpath}
     ${OPENEXR_LIBRARIES}
+    glew
     glfw
     ${GLFW_LIBRARIES}
   )

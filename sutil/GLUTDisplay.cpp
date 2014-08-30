@@ -26,9 +26,6 @@
 #  define GL_FRAMEBUFFER_SRGB_CAPABLE_EXT   0x8DBA
 #else
 #  include <GL/glew.h>
-#  if defined(_WIN32)
-#    include <GL/wglew.h>
-#  endif
 #  include <GL/glut.h>
 #endif
 
@@ -265,11 +262,10 @@ void GLUTDisplay::init( int& argc, char** argv )
     }
   }
 
-  if (!m_benchmark_no_display)
-  {
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-  }
+	if (!m_benchmark_no_display) {
+		glutInit(&argc, argv);
+		glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
+	}
 }
 
 void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E continuous_mode )
@@ -303,18 +299,10 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   glutInitWindowPosition(100,100);
   glutCreateWindow( m_title.c_str() );
   glutHideWindow();
-#if !defined(__APPLE__)
   glewInit();
   if (glewIsSupported( "GL_EXT_texture_sRGB GL_EXT_framebuffer_sRGB")) {
     m_sRGB_supported = true;
   }
-#else
-  m_sRGB_supported = true;
-#endif
-#if defined(_WIN32)
-  // Turn off vertical sync
-  wglSwapIntervalEXT(0);
-#endif
 
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -643,8 +631,8 @@ void GLUTDisplay::keyPressed(unsigned char key, int x, int y)
     break;
 
   case 's':
-    //sutilDisplayFilePPM( "out.ppm", m_scene->getOutputBuffer()->get() );
-	  sutilDisplayFilePPM( ("outputs/"+m_title+".ppm").c_str(), m_scene->getOutputBuffer()->get() );
+    sutilDisplayFilePPM( "outputs/out.ppm", m_scene->getOutputBuffer()->get() );
+	//sutilDisplayFilePPM( ("outputs/"+m_title+".ppm").c_str(), m_scene->getOutputBuffer()->get() );
 
     break;
 

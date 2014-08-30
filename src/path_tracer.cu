@@ -65,7 +65,6 @@ rtBuffer<float4, 2>              output_buffer;
 rtBuffer<float4, 2>              output_buffer_empty;	// photo
 rtBuffer<float4, 2>              output_buffer_local;
 rtBuffer<float4, 2>              output_buffer_all;
-rtBuffer<float4, 2>              output_buffer_local_out;
 rtBuffer<float4, 2>              output_buffer_virt_out;
 
 // use differential rendering
@@ -235,7 +234,6 @@ RT_PROGRAM void pathtrace_camera() {
 		output_buffer_local[launch_index] = make_float4( pixel_color_local, 0.0f );
 		output_buffer_all[launch_index] = make_float4( pixel_color_all, 0.0f );
 		output_buffer_virt_out[launch_index] = make_float4( getRay(top_object, 1), 0.0f );
-
 	}
 
 	// final output
@@ -382,7 +380,7 @@ RT_PROGRAM void miss() {
 	float u = (theta + M_PIf) * (0.5f * M_1_PIf);
 	float v = 0.5f * (1.0f + sin(phi));
 	float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-	//emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
+	emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
 	current_prd.radiance = emap;
 	current_prd.done = true;
 }

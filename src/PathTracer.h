@@ -22,7 +22,7 @@
 #include "path_tracer.h"
 #include "helpers.h"
 
-#include "Renderer.h"
+#include "texture/PPMTexture.h"
 #include "scene/Scene.h"
 
 
@@ -34,49 +34,59 @@ namespace std {
 
 //-----------------------------------------------------------------------------
 //
-// PathTracerScene
+// PathTracer
 //
 //-----------------------------------------------------------------------------
-class PathTracerScene: public SampleScene {
+class PathTracer: public SampleScene {
 public:
-  // Set the actual render parameters below in main().
-  PathTracerScene()
-  : m_rr_begin_depth(1u)
-  , m_max_depth(100u)
-  , m_sqrt_num_samples( 0u )
-  , m_width(512u)
-  , m_height(512u)
-  , scene() {
-	lightmap_y_rot = 0.28f;
-  }
+	// Set the actual render parameters below in main().
+	PathTracer() :
+			m_rr_begin_depth(1u), m_max_depth(100u), m_sqrt_num_samples(0u),
+			m_width(512u), m_height(512u) {
+		lightmap_y_rot = 0.28f;
+	}
 
-  virtual void   initScene( InitialCameraData& camera_data );
-  virtual void   trace( const RayGenCameraData& camera_data );
-  virtual optix::Buffer getOutputBuffer();
+	void initScene( shared_ptr<Scene> );
+	virtual void initScene(InitialCameraData& camera_data);
+	virtual void trace(const RayGenCameraData& camera_data);
+	virtual optix::Buffer getOutputBuffer();
 
-  void   setNumSamples( unsigned int sns )                           { m_sqrt_num_samples= sns; }
-  void   setDimensions( const unsigned int w, const unsigned int h ) { m_width = w; m_height = h; }
+	void setNumSamples(unsigned int sns) {
+		m_sqrt_num_samples = sns;
+	}
+
+	void setDimensions(const unsigned int w, const unsigned int h) {
+		m_width = w;
+		m_height = h;
+	}
 
 private:
-  // Should return true if key was handled, false otherwise.
-  virtual bool keyPressed(unsigned char key, int x, int y);
+	void resetScene();
 
-  unsigned int   m_rr_begin_depth;
-  unsigned int   m_max_depth;
-  unsigned int   m_sqrt_num_samples;
-  unsigned int   m_width;
-  unsigned int   m_height;
-  unsigned int   m_frame;
-  unsigned int   m_sampling_strategy;
+	// Should return true if key was handled, false otherwise.
+	virtual bool keyPressed(unsigned char key, int x, int y);
 
-  optix::Program diffuse_ch_out;
-  optix::Program diffuse_ch;
-  optix::Program diffuse_ah;
+	optix::Context optix_context;
+	optix::Program bounding_box;
+	optix::Program intersection;
+	optix::Program diffuse_ch_out;
+	optix::Program diffuse_ch;
+	optix::Program diffuse_ah;
 
-  float lightmap_y_rot;
+	unsigned int m_rr_begin_depth;
+	unsigned int m_max_depth;
+	unsigned int m_sqrt_num_samples;
+	unsigned int m_width;
+	unsigned int m_height;
+	unsigned int m_frame;
+	unsigned int m_sampling_strategy;
+	float lightmap_y_rot;
 
-  Scene scene;
-  Renderer final, empty, local, all, local_out, virt_out;
+	// scene to path trace
+	shared_ptr<Scene> scene;
+
+	// textures required for differential rendering
+	PPMTexture final, local, all, virt_out;
 };
 } /* namespace std */
 

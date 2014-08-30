@@ -11,12 +11,17 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <optixu/optixpp_namespace.h>
+
 namespace std {
 
 class Display {
 public:
-	Display();
+	Display(int, int);
 	virtual ~Display();
+
+	void run();
+	void draw(optix::Buffer);
 
 private:
 	GLFWwindow* window;

@@ -5,6 +5,8 @@
  *      Author: asdf
  */
 
+#include <algorithm>
+#include <fstream>
 #include <iostream>
 
 #include <SampleScene.h>
@@ -15,6 +17,17 @@
 
 
 namespace std {
+
+vector<string> split(const string &s, char delim) {
+    vector<string> elems;
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim)) {
+    	item.erase(remove(item.begin(), item.end(), ' '), item.end());
+        elems.push_back(item);
+    }
+    return elems;
+}
 
 Scene::Scene() {
 	float scale = 1.0f;
@@ -49,8 +62,25 @@ Scene::Scene() {
 			optix::make_float3( 0.3f, 0.4f, 0.85f ));
 }
 
-Scene::~Scene() {
-	// TODO Auto-generated destructor stub
+Scene::~Scene() {}
+
+void Scene::addOption(string op) {
+	vector<string> ss = split(op, '=');
+    if (ss.size() == 2) {
+    	options.insert(make_pair(ss[0], ss[1]));
+    }
+}
+
+void Scene::loadConfig(string fname) {
+	cout << "config file = " << fname << endl;
+	ifstream ifs(fname, ifstream::in);
+    for (string line; getline(ifs, line); ) {
+    	addOption(line);
+    }
+}
+
+Texture &Scene::getPhoto() {
+	return photo;
 }
 
 void Scene::init(optix::Context &m_context) {
@@ -59,6 +89,8 @@ void Scene::init(optix::Context &m_context) {
 	localgroup = context->createGroup();
 	virtgroup = context->createGroup();
 	emptygroup = context->createGroup();
+	virtualGeometry(options["directory"]);
+	photo.init(context, "output_buffer_empty", "resource/ot.ppm");	// load photo from ppm file
 }
 
 void Scene::addModel(vector<Model> &set, string fname, float scale, optix::float3 pos, optix::float3 c) {
@@ -76,12 +108,12 @@ void Scene::addModel(vector<Model> &set, string fname, float scale, optix::float
 	set.push_back(m);
 }
 
-void Scene::setMeshPrograms( optix::Program bb, optix::Program inter) {
-	  m_pgram_bounding_box = bb;
-	  m_pgram_intersection = inter;
+void Scene::setMeshPrograms(optix::Program bb, optix::Program inter) {
+	m_pgram_bounding_box = bb;
+	m_pgram_intersection = inter;
 }
 
-void Scene::setMaterialPrograms( optix::Program ch, optix::Program ah ) {
+void Scene::setMaterialPrograms(optix::Program ch, optix::Program ah) {
 	diffuse_ch = ch;
 	diffuse_ah = ah;
 }
@@ -97,9 +129,10 @@ void Scene::modify(float k) {
 }
 
 void Scene::virtualGeometry( const std::string& path ) {
+	cout << "make geometry and materials" << endl;
 	optix::Material material = createMaterials(context, "diffuse");
 
-	std::string full_path = std::string( sutilSamplesDir() ) + lightmap_path;
+	string full_path = string( sutilSamplesDir() ) + lightmap_path;
 	const optix::float3 default_color = optix::make_float3( 0.8f, 0.88f, 0.97f );
 	context["envmap"]->setTextureSampler( loadExrTexture( lightmap_path.c_str(), context, default_color) );
 

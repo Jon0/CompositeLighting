@@ -8,12 +8,16 @@
 #ifndef SCENE_H_
 #define SCENE_H_
 
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
+
+#include "../texture/PPMTexture.h"
 
 namespace std {
 
@@ -30,9 +34,10 @@ public:
 	Scene();
 	virtual ~Scene();
 
+	void loadConfig(string);
+	Texture &getPhoto();
 	void init(optix::Context &);
 	void addModel(vector<Model> &, string fname, float scale, optix::float3 pos, optix::float3 c);
-
 	void setMeshPrograms( optix::Program, optix::Program );
 	void setMaterialPrograms( optix::Program, optix::Program );
 
@@ -55,6 +60,7 @@ public:
 	optix::Material createMaterials(optix::Context &m_context, string);
 
 private:
+	map<string, string> options;
 	optix::Context context;
 	vector<Model> models, local_models;
 
@@ -70,6 +76,10 @@ private:
 	optix::Program diffuse_ah;
 
 	string lightmap_path;
+
+	PPMTexture photo;
+
+	void addOption(string);
 };
 
 } /* namespace std */
