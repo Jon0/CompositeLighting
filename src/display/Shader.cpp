@@ -44,8 +44,7 @@ Shader::Shader(string filename, GLenum shader_type) {
 	//Error checking.
 	int isCompiled;
 	glGetShaderiv( ShaderHandle, GL_COMPILE_STATUS, &isCompiled );
-	if( !isCompiled )
-	{
+	if( !isCompiled ) {
 	        GLint maxLength = 0;
 	        glGetShaderiv( ShaderHandle, GL_INFO_LOG_LENGTH, &maxLength );
 

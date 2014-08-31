@@ -7,6 +7,10 @@
 
 #include <iostream>
 
+#include <optixu/optixu_math_stream_namespace.h>
+
+#include <Mouse.h>
+
 #include "PathTracer.h"
 
 using namespace optix;
@@ -14,15 +18,30 @@ using namespace optix;
 namespace std {
 
 // for GLFW Display
-void PathTracer::initScene(shared_ptr<Scene> s) {
+void PathTracer::initScene(shared_ptr<Scene> s, bool prepare) {
 	scene = s;
 	//Texture &t = scene->getPhoto();
 	//setNumSamples(1);
 	//setDimensions(t.width(), t.height());
 
+
+	InitialCameraData initial_camera_data = InitialCameraData( make_float3( -42.067986f, 13.655909f, -7.266403f ), // eye
+                                     make_float3( 0.938559f, -0.304670f, 0.162117f ),    // lookat
+                                     make_float3( 0.300224f, 0.952457f, 0.051857f ),       // up
+                                     32.22f ); // vfov
+
+
+
+	  // Initialize camera according to scene params
+	m_camera = new PinholeCamera(initial_camera_data.eye,
+			initial_camera_data.lookat, initial_camera_data.up, -1.0f, // hfov is ignored when using keep vertical
+			initial_camera_data.vfov, PinholeCamera::KeepVertical);
+
+	m_camera->setup();
+
 	setNumSamples(1);
 	setDimensions(960, 540);
-	//resetScene();
+	if (prepare) resetScene();
 }
 
 // used by GLUTDisplay
@@ -50,7 +69,7 @@ void PathTracer::resetScene() {
 	optix_context["pathtrace_shadow_ray_type"]->setUint(1u);
 	optix_context["pathtrace_bsdf_shadow_ray_type"]->setUint(2u);
 	optix_context["rr_begin_depth"]->setUint(m_rr_begin_depth);
-	optix_context["display_mode"]->setUint(0);
+	optix_context["display_mode"]->setUint(3);
 
 	// buffers required for differential rendering
 	cout << "make buffers" << endl;
@@ -80,7 +99,6 @@ void PathTracer::resetScene() {
 	optix_context->setExceptionProgram(0, exception_program);
 	optix_context->setMissProgram( 0, optix_context->createProgramFromPTXFile( ptx_path, "miss" ) );
 
-
 	// Index of sampling_stategy (BSDF, light, MIS)
 	m_sampling_strategy = 0;
 	optix_context["sampling_stategy"]->setInt(m_sampling_strategy);
@@ -102,6 +120,10 @@ void PathTracer::resetScene() {
 	scene->setMaterialPrograms(diffuse_ch, diffuse_ah);
 	scene->init(optix_context);
 
+	//enableCPURendering(false);
+	//setNumDevices( optix_context->getDeviceCount() );
+
+
 	// Finalize
 	cout << "compile programs" << endl;
 	m_context->validate();
@@ -122,12 +144,12 @@ bool PathTracer::keyPressed(unsigned char key, int x, int y) {
 		m_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
 		return true;
 	}
-	else if (key == 'q') {
+	else if (key == 'w') {
 		m_camera_changed = true;
 		scene->modify(1.0f);
 		return true;
 	}
-	else if (key == 'w') {
+	else if (key == 's') {
 		m_camera_changed = true;
 		scene->modify(-1.0f);
 		return true;
@@ -146,10 +168,35 @@ bool PathTracer::keyPressed(unsigned char key, int x, int y) {
 
 void PathTracer::trace(const RayGenCameraData& camera_data) {
 	if (m_camera_changed) {
+		cout << camera_data.eye << camera_data.U << camera_data.V << camera_data.W << endl;
 		m_context["eye"]->setFloat(camera_data.eye);
 		m_context["U"]->setFloat(camera_data.U);
 		m_context["V"]->setFloat(camera_data.V);
 		m_context["W"]->setFloat(camera_data.W);
+		m_camera_changed = false;
+		m_frame = 1;
+	}
+	m_context["frame_number"]->setUint(m_frame++);
+
+	// launch cuda
+	Buffer buffer = m_context["output_buffer"]->getBuffer();
+	RTsize buffer_width, buffer_height;
+	buffer->getSize(buffer_width, buffer_height);
+	m_context->launch(0, static_cast<unsigned int>(buffer_width),
+			static_cast<unsigned int>(buffer_height));
+}
+
+void PathTracer::trace() {
+	if (m_camera_changed) {
+		float3 eye, U, V, W;
+		m_camera->getEyeUVW(eye, U, V, W);
+		//RayGenCameraData camera_data(eye, U, V, W);
+
+		cout << eye << U << V << W << endl;
+		m_context["eye"]->setFloat(eye);
+		m_context["U"]->setFloat(U);
+		m_context["V"]->setFloat(V);
+		m_context["W"]->setFloat(W);
 		m_camera_changed = false;
 		m_frame = 1;
 	}

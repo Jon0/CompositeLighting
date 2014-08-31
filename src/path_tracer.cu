@@ -211,6 +211,9 @@ static __device__ float4 getDifferential() {
 //
 //-----------------------------------------------------------------------------
 RT_PROGRAM void pathtrace_camera() {
+	//output_buffer[launch_index] = make_float4(launch_index.x / 1000.0f, launch_index.y / 1000.0f, 0.0f, 0.0f);
+	//return;
+
 	float3 pixel_color_local = getRay(local_object, 0);
 	float3 pixel_color_all = getRay(top_object, 0);
 

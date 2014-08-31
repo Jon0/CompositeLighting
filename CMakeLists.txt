@@ -85,26 +85,6 @@ if(NOT PASSED_FIRST_CONFIGURE)
     list(APPEND CUDA_NVCC_FLAGS ${flag})
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} CACHE LIST "Semi-colon delimit multiple arguments." FORCE)
   endif()
-
-  if (CUDA_VERSION VERSION_LESS "3.0")
-    set(flag "--keep")
-    list(FIND CUDA_NVCC_FLAGS ${flag} index)
-    if(index EQUAL -1)
-      list(APPEND CUDA_NVCC_FLAGS ${flag})
-      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} CACHE LIST "Semi-colon delimit multiple arguments." FORCE)
-    endif()
-  endif()
-
-  if( APPLE )
-    # Undef'ing __BLOCKS__ for OSX builds.  This is due to a name clash between OSX 10.6
-    # C headers and CUDA headers
-    set(flag "-U__BLOCKS__")
-    list(FIND CUDA_NVCC_FLAGS ${flag} index)
-    if(index EQUAL -1)
-      list(APPEND CUDA_NVCC_FLAGS ${flag})
-      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} CACHE LIST "Semi-colon delimit multiple arguments." FORCE)
-    endif()
-  endif()
 endif(NOT PASSED_FIRST_CONFIGURE)
 
 # This passes a preprocessor definition to cl.exe when processing CUDA code.
@@ -242,6 +222,9 @@ add_subdirectory(src)
 
 # sutil library.  The rules to build it are found in the subdirectory.
 add_subdirectory(sutil)
+
+# copy resources to build directory
+file( COPY "${PROJECT_SOURCE_DIR}/resource/" DESTINATION "${PROJECT_BINARY_DIR}/resource/")
 
 # This copies out dlls into the build directories, so that users no longer need to copy
 # them over in order to run the samples.  This depends on the cook sample being compiled.

@@ -8,6 +8,8 @@
 #ifndef PPMTEXTURE_H_
 #define PPMTEXTURE_H_
 
+#include <GL/glew.h>
+
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
@@ -33,6 +35,7 @@ public:
 private:
 	string buf_name;
 	int index, i_width, i_height;
+	GLuint addr;
 	RTformat format;
 	optix::Buffer makeBuffer(optix::Context &m_context, bool useGL);
 };

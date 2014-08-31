@@ -23,17 +23,18 @@ struct texvec {
 
 class GLrenderer {
 public:
-	GLrenderer();
+	GLrenderer(GLuint);
 	virtual ~GLrenderer();
 
 	void draw();
+	void copyPbo(GLuint);
 
 private:
 	int width, height;
 	Pipeline tex_pipeline;
 
 	GLbuffer<texvec> buff;
-	GLuint t_addr;
+	GLuint tex_addr, pbo_addr;
 };
 
 } /* namespace std */

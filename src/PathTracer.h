@@ -46,8 +46,10 @@ public:
 		lightmap_y_rot = 0.28f;
 	}
 
-	void initScene( shared_ptr<Scene> );
+	void initScene( shared_ptr<Scene>, bool );
 	virtual void initScene(InitialCameraData& camera_data);
+
+	void trace();
 	virtual void trace(const RayGenCameraData& camera_data);
 	virtual optix::Buffer getOutputBuffer();
 
@@ -65,6 +67,8 @@ private:
 
 	// Should return true if key was handled, false otherwise.
 	virtual bool keyPressed(unsigned char key, int x, int y);
+
+	PinholeCamera *m_camera;
 
 	optix::Context optix_context;
 	optix::Program bounding_box;

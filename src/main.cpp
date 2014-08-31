@@ -45,20 +45,19 @@ void useGLUT(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+	Display d(960, 540);
 	GLUTDisplay::init(argc, argv);
-	//Display d(960, 540);
 
 	// Process command line options
 	shared_ptr<Scene> scene = make_shared<Scene>();
 	scene->loadConfig("config.txt");
 
-	pt.initScene(scene);
-
-	// pass output buffer to display
+	pt.initScene(scene, false);
 
 	useGLUT(argc, argv);
 
-	//d.run();
 
+	// pass output buffer to display
+	d.run( pt );
 	return 0;
 }

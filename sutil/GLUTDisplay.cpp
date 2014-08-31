@@ -297,17 +297,17 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   else
     glutInitWindowSize( 128, 128 );
   glutInitWindowPosition(100,100);
-  glutCreateWindow( m_title.c_str() );
-  glutHideWindow();
-  glewInit();
-  if (glewIsSupported( "GL_EXT_texture_sRGB GL_EXT_framebuffer_sRGB")) {
-    m_sRGB_supported = true;
-  }
+  //glutCreateWindow( m_title.c_str() );
+  //glutHideWindow();
+  //glewInit();
+  //if (glewIsSupported( "GL_EXT_texture_sRGB GL_EXT_framebuffer_sRGB")) {
+  //  m_sRGB_supported = true;
+  //}
 
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
   // If m_app_continuous_mode was already set to CDBenchmark* on the command line then preserve it.
-  setContinuousMode( m_app_continuous_mode == CDNone ? continuous_mode : m_app_continuous_mode );
+  //setContinuousMode( m_app_continuous_mode == CDNone ? continuous_mode : m_app_continuous_mode );
 
   int buffer_width;
   int buffer_height;
@@ -349,17 +349,17 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   glLoadIdentity();
   glViewport(0, 0, buffer_width, buffer_height);
 
-  glutShowWindow();
-
-  // reshape window to the correct window resize
-  glutReshapeWindow( buffer_width, buffer_height);
-
-  // Set callbacks
-  glutKeyboardFunc(keyPressed);
-  glutDisplayFunc(display);
-  glutMouseFunc(mouseButton);
-  glutMotionFunc(mouseMotion);
-  glutReshapeFunc(resize);
+//  glutShowWindow();
+//
+//  // reshape window to the correct window resize
+//  glutReshapeWindow( buffer_width, buffer_height);
+//
+//  // Set callbacks
+//  glutKeyboardFunc(keyPressed);
+//  glutDisplayFunc(display);
+//  glutMouseFunc(mouseButton);
+//  glutMotionFunc(mouseMotion);
+//  glutReshapeFunc(resize);
 
   // Initialize timer
   sutilCurrentTime( &m_last_frame_time );
@@ -374,11 +374,11 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   m_benchmark_frame_start = 0;
 
   //Calculate window position offset
-  m_old_window_x_offset = glutGet(GLUT_INIT_WINDOW_X) - glutGet(GLUT_WINDOW_X);
-  m_old_window_y_offset = glutGet(GLUT_INIT_WINDOW_Y) - glutGet(GLUT_WINDOW_Y);
+  //m_old_window_x_offset = glutGet(GLUT_INIT_WINDOW_X) - glutGet(GLUT_WINDOW_X);
+  //m_old_window_y_offset = glutGet(GLUT_INIT_WINDOW_Y) - glutGet(GLUT_WINDOW_Y);
 
   // Enter main loop
-  glutMainLoop();
+  //glutMainLoop();
 }
 
 void GLUTDisplay::setCamera(SampleScene::InitialCameraData& camera_data)
@@ -562,7 +562,9 @@ void GLUTDisplay::keyPressed(unsigned char key, int x, int y)
   switch (key) {
   case 27: // esc
   case 'q':
-    quit();
+	  //glutLeaveMainLoop();
+	  break;
+    //quit();
   case 'f':
     if ( m_old_window_width == -1) { // We are in non-fullscreen mode
       m_old_window_width  = glutGet(GLUT_WINDOW_WIDTH);

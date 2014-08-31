@@ -7,8 +7,9 @@
 
 #include <iostream>
 
-#include <GL/glew.h>
-#include <GL/gl.h>
+#include <optixu/optixu_math_stream_namespace.h>
+#include <optixu/optixu.h>
+
 #include <PPMLoader.h>
 
 #include "PPMTexture.h"
@@ -16,7 +17,8 @@
 namespace std {
 
 PPMTexture::PPMTexture() {
-	index = 0; //numRenderers++;
+	addr = 0;
+	index = 0;
 }
 
 PPMTexture::~PPMTexture() {
@@ -82,16 +84,14 @@ void PPMTexture::setImage(optix::Context &m_context, string path, string file) {
 optix::Buffer PPMTexture::makeBuffer(optix::Context &m_context, bool useGL) {
 	optix::Buffer buffer;
 	if ( useGL ) {
-		GLuint vbo = 0;
-		glGenBuffers(1, &vbo);
-		//glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		//size_t element_size;
-		//m_context->checkError(rtuGetSizeForRTformat(format, &element_size));
-		//glBufferData(GL_ARRAY_BUFFER, element_size * width * height, 0,
-		//		GL_STREAM_DRAW);
-		//glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glGenBuffers(1, &addr);
+		glBindBuffer(GL_ARRAY_BUFFER, addr);
+		size_t element_size;
+		m_context->checkError(rtuGetSizeForRTformat(format, &element_size));
+		glBufferData(GL_ARRAY_BUFFER, element_size * i_width * i_height, 0,	GL_STREAM_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-		buffer = m_context->createBufferFromGLBO(RT_BUFFER_OUTPUT, vbo);
+		buffer = m_context->createBufferFromGLBO(RT_BUFFER_OUTPUT, addr);
 		buffer->setFormat(format);
 		buffer->setSize(i_width, i_height);
 	}

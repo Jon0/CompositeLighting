@@ -8,10 +8,15 @@
 #ifndef DISPLAY_H_
 #define DISPLAY_H_
 
+#include <memory>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include <optixu/optixpp_namespace.h>
+
+#include "../PathTracer.h"
+#include "GLrenderer.h"
 
 namespace std {
 
@@ -20,11 +25,12 @@ public:
 	Display(int, int);
 	virtual ~Display();
 
-	void run();
+	void run(PathTracer &);
 	void draw(optix::Buffer);
 
 private:
-	GLFWwindow* window;
+	GLFWwindow *window;
+
 };
 
 } /* namespace std */

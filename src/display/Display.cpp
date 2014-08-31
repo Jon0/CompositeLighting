@@ -28,14 +28,18 @@ Display::~Display() {
 	glfwTerminate();
 }
 
-void Display::run() {
+void Display::run(PathTracer &pt) {
+	cout << "begin loop" << endl;
+	GLrenderer renderer(pt.getOutputBuffer()->getGLBOId() );
 	while (!glfwWindowShouldClose(window)) {
+		pt.trace();
+
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
 
-
 		glViewport(0, 0, width, height);
 		glClear(GL_COLOR_BUFFER_BIT);
+		renderer.draw();
 
 		glFlush();
 		glfwSwapBuffers(window);
