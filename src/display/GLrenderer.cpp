@@ -15,16 +15,16 @@ GLrenderer::GLrenderer(GLuint addr): buff(GL_ARRAY_BUFFER, false) {
     pbo_addr = addr;
 
     glGenTextures(1, &tex_addr);
-	glBindTexture(GL_TEXTURE_RECTANGLE_NV, tex_addr);
+	glBindTexture(GL_TEXTURE_2D, tex_addr); //GL_TEXTURE_RECTANGLE_NV
 
     // Change these to GL_LINEAR for super- or sub-sampling
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // GL_CLAMP_TO_EDGE for linear filtering, not relevant for nearest.
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glBindTexture(GL_TEXTURE_RECTANGLE_NV, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	vector<texvec> data = {
 			{glm::vec4(-1,-1,0,1), glm::vec2(0,0)}, {glm::vec4(1,-1,0,1), glm::vec2(width,0)},
@@ -51,9 +51,8 @@ void GLrenderer::draw() {
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 
-	glBindTexture(GL_TEXTURE_RECTANGLE_NV, tex_addr);
+	glBindTexture(GL_TEXTURE_2D, tex_addr);
 	copyPbo(pbo_addr);
-
 
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -65,15 +64,8 @@ void GLrenderer::draw() {
 void GLrenderer::copyPbo(GLuint addr) {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_addr);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
-
-//    RTsize elementSize = buffer->getElementSize();
-//    if      ((elementSize % 8) == 0) glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
-//    else if ((elementSize % 4) == 0) glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-//    else if ((elementSize % 2) == 0) glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
-//    else                             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
     // assume float4
-    glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, 0);
     glBindBuffer (GL_PIXEL_UNPACK_BUFFER, 0);
 }
 

@@ -20,6 +20,7 @@
  */
 
 #include "display/Display.h"
+#include "display/GLUTDisplay.h"
 #include "PathTracer.h"
 
 using namespace std;
@@ -45,19 +46,24 @@ void useGLUT(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
-	Display d(960, 540);
-	GLUTDisplay::init(argc, argv);
-
 	// Process command line options
 	shared_ptr<Scene> scene = make_shared<Scene>();
 	scene->loadConfig("config.txt");
 
-	pt.initScene(scene, false);
 
-	useGLUT(argc, argv);
+
+	Display d(960, 540);
+	//GLUTDisplay2 glut(argc, argv);
+	//GLUTDisplay::init(argc, argv);
+
+	pt.initScene(scene, true);
+
+	//useGLUT(argc, argv);
+
 
 
 	// pass output buffer to display
+	//glut.run( pt );
 	d.run( pt );
 	return 0;
 }

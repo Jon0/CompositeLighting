@@ -33,7 +33,6 @@ void Display::run(PathTracer &pt) {
 	GLrenderer renderer(pt.getOutputBuffer()->getGLBOId() );
 	while (!glfwWindowShouldClose(window)) {
 		pt.trace();
-
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
 

@@ -276,51 +276,27 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   }
   m_scene = scene;
   m_title = title;
-  m_scene->enableCPURendering(m_enable_cpu_rendering);
-  m_scene->setNumDevices( m_num_devices );
+  //m_scene->enableCPURendering(m_enable_cpu_rendering);
+  //m_scene->setNumDevices( m_num_devices );
 
-  if( m_benchmark_no_display ) {
-    runBenchmarkNoDisplay();
-    quit(0);
-  }
-
-  if( m_print_mem_usage ) {
-    DeviceMemoryLogger::logDeviceDescription(m_scene->getContext(), std::cerr);
-    DeviceMemoryLogger::logCurrentMemoryUsage(m_scene->getContext(), std::cerr, "Initial memory available: " );
-    std::cerr << std::endl;
-  }
+  int buffer_width = 960;
+  int buffer_height = 540;
 
   // Initialize GLUT and GLEW first. Now initScene can use OpenGL and GLEW.
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-  if( m_initial_window_width > 0 && m_initial_window_height > 0)
-    glutInitWindowSize( m_initial_window_width, m_initial_window_height );
-  else
-    glutInitWindowSize( 128, 128 );
+  glutInitWindowSize( buffer_width, buffer_height );
   glutInitWindowPosition(100,100);
-  //glutCreateWindow( m_title.c_str() );
-  //glutHideWindow();
-  //glewInit();
-  //if (glewIsSupported( "GL_EXT_texture_sRGB GL_EXT_framebuffer_sRGB")) {
-  //  m_sRGB_supported = true;
-  //}
-
-  //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glutCreateWindow( m_title.c_str() );
+  glewInit();
 
   // If m_app_continuous_mode was already set to CDBenchmark* on the command line then preserve it.
-  //setContinuousMode( m_app_continuous_mode == CDNone ? continuous_mode : m_app_continuous_mode );
+  setContinuousMode( m_app_continuous_mode == CDNone ? continuous_mode : m_app_continuous_mode );
 
-  int buffer_width;
-  int buffer_height;
+
   try {
     // Set up scene
     SampleScene::InitialCameraData camera_data;
     m_scene->initScene( camera_data );
-
-    if( m_initial_window_width > 0 && m_initial_window_height > 0)
-      m_scene->resize( m_initial_window_width, m_initial_window_height );
-
-    if ( !m_camera_pose.empty() )
-      camera_data = SampleScene::InitialCameraData( m_camera_pose );
 
     // Initialize camera according to scene params
     m_camera = new PinholeCamera( camera_data.eye,
@@ -330,16 +306,24 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
                                  camera_data.vfov,
                                  PinholeCamera::KeepVertical );
 
-    Buffer buffer = m_scene->getOutputBuffer();
-    RTsize buffer_width_rts, buffer_height_rts;
-    buffer->getSize( buffer_width_rts, buffer_height_rts );
-    buffer_width  = static_cast<int>(buffer_width_rts);
-    buffer_height = static_cast<int>(buffer_height_rts);
     m_mouse = new Mouse( m_camera, buffer_width, buffer_height );
   } catch( Exception& e ){
     sutilReportError( e.getErrorString().c_str() );
     exit(2);
   }
+
+  glGenTextures( 1, &m_texId );
+  glBindTexture( GL_TEXTURE_2D, m_texId);
+
+  // Change these to GL_LINEAR for super- or sub-sampling
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+  // GL_CLAMP_TO_EDGE for linear filtering, not relevant for nearest.
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  glBindTexture( GL_TEXTURE_2D, 0);
 
   // Initialize state
   glMatrixMode(GL_PROJECTION);
@@ -349,36 +333,20 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   glLoadIdentity();
   glViewport(0, 0, buffer_width, buffer_height);
 
-//  glutShowWindow();
+  glutShowWindow();
 //
 //  // reshape window to the correct window resize
-//  glutReshapeWindow( buffer_width, buffer_height);
+  glutReshapeWindow( buffer_width, buffer_height);
 //
 //  // Set callbacks
-//  glutKeyboardFunc(keyPressed);
-//  glutDisplayFunc(display);
-//  glutMouseFunc(mouseButton);
-//  glutMotionFunc(mouseMotion);
-//  glutReshapeFunc(resize);
-
-  // Initialize timer
-  sutilCurrentTime( &m_last_frame_time );
-  m_frame_count = 0;
-  m_last_frame_count = 0;
-  m_start_time = m_last_frame_time;
-  if( m_cur_continuous_mode == CDBenchmarkTimed ) {
-    m_warmup_start = m_last_frame_time;
-    m_warmup_frames = 0;
-    m_timed_frames = 0;
-  }
-  m_benchmark_frame_start = 0;
-
-  //Calculate window position offset
-  //m_old_window_x_offset = glutGet(GLUT_INIT_WINDOW_X) - glutGet(GLUT_WINDOW_X);
-  //m_old_window_y_offset = glutGet(GLUT_INIT_WINDOW_Y) - glutGet(GLUT_WINDOW_Y);
+  glutKeyboardFunc(keyPressed);
+  glutDisplayFunc(display);
+  glutMouseFunc(mouseButton);
+  glutMotionFunc(mouseMotion);
+  glutReshapeFunc(resize);
 
   // Enter main loop
-  //glutMainLoop();
+  glutMainLoop();
 }
 
 void GLUTDisplay::setCamera(SampleScene::InitialCameraData& camera_data)
@@ -725,77 +693,30 @@ void GLUTDisplay::idle()
 
 void GLUTDisplay::displayFrame()
 {
-  GLboolean sRGB = GL_FALSE;
-  if (m_use_sRGB && m_sRGB_supported) {
-    glGetBooleanv( GL_FRAMEBUFFER_SRGB_CAPABLE_EXT, &sRGB );
-    if (sRGB) {
-      glEnable(GL_FRAMEBUFFER_SRGB_EXT);
-    }
-  }
-
   // Draw the resulting image
   Buffer buffer = m_scene->getOutputBuffer();
-  RTsize buffer_width_rts, buffer_height_rts;
-  buffer->getSize( buffer_width_rts, buffer_height_rts );
-  int buffer_width  = static_cast<int>(buffer_width_rts);
-  int buffer_height = static_cast<int>(buffer_height_rts);
-  RTformat buffer_format = buffer->getFormat();
+  int buffer_width  = 960;
+  int buffer_height = 540;
 
-  if( m_save_frames_to_file ) {
-    static char fname[128];
-    std::string basename = m_save_frames_basename.empty() ? "frame" : m_save_frames_basename;
-    sprintf(fname, "%s_%05d.ppm", basename.c_str(), m_frame_count);
-    sutilDisplayFilePPM( fname, buffer->get() );
-  }
 
-  unsigned int vboId = 0;
-  if( m_scene->usesVBOBuffer() )
-    vboId = buffer->getGLBOId();
+//  if( m_save_frames_to_file ) {
+//    static char fname[128];
+//    std::string basename = m_save_frames_basename.empty() ? "frame" : m_save_frames_basename;
+//    sprintf(fname, "%s_%05d.ppm", basename.c_str(), m_frame_count);
+//    sutilDisplayFilePPM( fname, buffer->get() );
+//  }
 
+  unsigned int vboId = buffer->getGLBOId();
   if (vboId)
   {
-    if (!m_texId)
-    {
-      glGenTextures( 1, &m_texId );
-      glBindTexture( GL_TEXTURE_2D, m_texId);
-
-      // Change these to GL_LINEAR for super- or sub-sampling
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-      // GL_CLAMP_TO_EDGE for linear filtering, not relevant for nearest.
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-      glBindTexture( GL_TEXTURE_2D, 0);
-    }
-
     glBindTexture( GL_TEXTURE_2D, m_texId );
 
     // send pbo to texture
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, vboId);
+    //glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
 
-    RTsize elementSize = buffer->getElementSize();
-    if      ((elementSize % 8) == 0) glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
-    else if ((elementSize % 4) == 0) glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    else if ((elementSize % 2) == 0) glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
-    else                             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-    {nvtx::ScopedRange r( "glTexImage" );
-    if(buffer_format == RT_FORMAT_UNSIGNED_BYTE4) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, buffer_width, buffer_height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0);
-    } else if(buffer_format == RT_FORMAT_FLOAT4) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, buffer_width, buffer_height, 0, GL_RGBA, GL_FLOAT, 0);
-    } else if(buffer_format == RT_FORMAT_FLOAT3) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F_ARB, buffer_width, buffer_height, 0, GL_RGB, GL_FLOAT, 0);
-    } else if(buffer_format == RT_FORMAT_FLOAT) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE32F_ARB, buffer_width, buffer_height, 0, GL_LUMINANCE, GL_FLOAT, 0);
-    } else {
-      assert(0 && "Unknown buffer format");
-    }
-    }
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, buffer_width, buffer_height, 0, GL_RGBA, GL_FLOAT, 0);
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
-
     glEnable(GL_TEXTURE_2D);
 
     // Initialize offsets to pixel center sampling.
@@ -815,93 +736,18 @@ void GLUTDisplay::displayFrame()
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
-  } else {
-    GLvoid* imageData = buffer->map();
-    assert( imageData );
-
-    GLenum gl_data_type = GL_FALSE;
-    GLenum gl_format = GL_FALSE;
-
-    switch (buffer_format) {
-          case RT_FORMAT_UNSIGNED_BYTE4:
-            gl_data_type = GL_UNSIGNED_BYTE;
-            gl_format    = GL_BGRA;
-            break;
-
-          case RT_FORMAT_FLOAT:
-            gl_data_type = GL_FLOAT;
-            gl_format    = GL_LUMINANCE;
-            break;
-
-          case RT_FORMAT_FLOAT3:
-            gl_data_type = GL_FLOAT;
-            gl_format    = GL_RGB;
-            break;
-
-          case RT_FORMAT_FLOAT4:
-            gl_data_type = GL_FLOAT;
-            gl_format    = GL_RGBA;
-            break;
-
-          default:
-            fprintf(stderr, "Unrecognized buffer data type or format.\n");
-            exit(2);
-            break;
-    }
-
-    RTsize elementSize = buffer->getElementSize();
-    int align = 1;
-    if      ((elementSize % 8) == 0) align = 8;
-    else if ((elementSize % 4) == 0) align = 4;
-    else if ((elementSize % 2) == 0) align = 2;
-    glPixelStorei(GL_UNPACK_ALIGNMENT, align);
-
-    NVTX_RangePushA("glDrawPixels");
-    glDrawPixels( static_cast<GLsizei>( buffer_width ), static_cast<GLsizei>( buffer_height ),
-      gl_format, gl_data_type, imageData);
-    NVTX_RangePop();
-
-    buffer->unmap();
-  }
-  if (m_use_sRGB && m_sRGB_supported && sRGB) {
-    glDisable(GL_FRAMEBUFFER_SRGB_EXT);
   }
 }
 
 void GLUTDisplay::display()
 {
-  if( m_cur_continuous_mode == CDProgressive && m_progressive_timeout > 0.0 ) {
-    // If doing progressive refinement, see if we're done
-    double current_time;
-    sutilCurrentTime( &current_time );
-    if( current_time - m_start_time > m_progressive_timeout ) {
-      setCurContinuousMode( CDNone );
-      return;
-    }
-  }
-
   try {
     // render the scene
     float3 eye, U, V, W;
     m_camera->getEyeUVW( eye, U, V, W );
-    // Don't be tempted to just start filling in the values outside of a constructor,
-    // because if you add a parameter it's easy to forget to add it here.
     SampleScene::RayGenCameraData camera_data( eye, U, V, W );
-    {nvtx::ScopedRange r( "trace" );
-    m_scene->trace( camera_data );
-    }
-
-    // Always count rendered frames
-    ++m_frame_count;
-
-    // Not strictly necessary
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    if( m_display_frames ) {
-      nvtx::ScopedRange r( "displayFrame" );
-      displayFrame();
-    }
+    m_scene->trace(camera_data);
+    displayFrame();
   } catch( Exception& e ){
     sutilReportError( e.getErrorString().c_str() );
     exit(2);
@@ -909,85 +755,25 @@ void GLUTDisplay::display()
 
   // Do not draw text on 1st frame -- issue on linux causes problems with
   // glDrawPixels call if drawText glutBitmapCharacter is called on first frame.
-  if ( m_display_fps && m_cur_continuous_mode != CDNone && m_frame_count > 1 ) {
-    // Output fps
-    double current_time;
-    sutilCurrentTime( &current_time );
-    double dt = current_time - m_last_frame_time;
-    if( dt > m_fps_update_threshold ) {
-      sprintf( m_fps_text, "fps: %7.2f", (m_frame_count - m_last_frame_count) / dt );
+//  if ( m_display_fps && m_cur_continuous_mode != CDNone && m_frame_count > 1 ) {
+//    // Output fps
+//    double current_time;
+//    sutilCurrentTime( &current_time );
+//    double dt = current_time - m_last_frame_time;
+//    if( dt > m_fps_update_threshold ) {
+//      sprintf( m_fps_text, "fps: %7.2f", (m_frame_count - m_last_frame_count) / dt );
+//
+//      m_last_frame_time = current_time;
+//      m_last_frame_count = m_frame_count;
+//    } else if( m_frame_count == 1 ) {
+//      sprintf( m_fps_text, "fps: %7.2f", 0.f );
+//    }
+//
+//    drawText( m_fps_text, 10.0f, 10.0f, GLUT_BITMAP_8_BY_13 );
+//  }
 
-      m_last_frame_time = current_time;
-      m_last_frame_count = m_frame_count;
-    } else if( m_frame_count == 1 ) {
-      sprintf( m_fps_text, "fps: %7.2f", 0.f );
-    }
-
-    drawText( m_fps_text, 10.0f, 10.0f, GLUT_BITMAP_8_BY_13 );
-  }
-
-  if( m_print_mem_usage ) {
-    // Output memory
-    std::ostringstream str;
-    DeviceMemoryLogger::logCurrentMemoryUsage(m_scene->getContext(), str);
-    drawText( str.str(), 10.0f, 26.0f, GLUT_BITMAP_8_BY_13 );
-  }
-
-  //printf("finished frame: %d\n", m_frame_count);
-  if( m_cur_continuous_mode == CDBenchmark || m_cur_continuous_mode == CDBenchmarkTimed ) {
-    double current_time;
-    sutilCurrentTime(&current_time);
-
-    // Do the timed frames first, since m_benchmark_frame_time may be set by the warmup
-    // section below and we don't want to double count the frames.
-    if ( m_cur_continuous_mode == CDBenchmarkTimed ) {
-      // Count elapsed time, but only if we have moved out of the warmup phase.
-      if (m_benchmark_frame_time > 0) {
-        m_timed_frames++;
-        //printf("_timed_frames = %d\n", m_timed_frames);
-        double total_time = current_time-m_benchmark_frame_time;
-        if ( total_time > m_benchmark_time ) {
-          sutilPrintBenchmark(m_title.c_str(), total_time, m_warmup_frames, m_timed_frames);
-          setCurContinuousMode( CDNone );
-          quit(0); // We only get here for command line benchmarks, which always end.
-        }
-      }
-    } else {
-      // Count frames
-      if(m_frame_count == m_benchmark_frame_start+m_warmup_frames+m_timed_frames) {
-        double total_time = current_time-m_benchmark_frame_time;
-        sutilPrintBenchmark(m_title.c_str(), total_time, m_warmup_frames, m_timed_frames);
-        setCurContinuousMode( CDNone );
-        quit(0); // We only get here for command line benchmarks, which always end.
-      }
-    }
-
-    if ( m_cur_continuous_mode == CDBenchmarkTimed ) {
-      if ( current_time-m_warmup_start < m_warmup_time) {
-        // Under the alloted time, keep counting
-        m_warmup_frames++;
-        //printf("_warmup_frames = %d\n", m_warmup_frames);
-      } else {
-        // Over the alloted time, set the m_benchmark_frame_time if it hasn't been set yet.
-        if (m_benchmark_frame_time == 0) {
-          m_benchmark_frame_time = current_time;
-          // Make sure we account for that last frame
-          m_warmup_frames++;
-          //printf("warmup done (m_warmup_frames = %d) after %g seconds.\n", m_warmup_frames, current_time-m_warmup_start);
-        }
-      }
-    } else {
-      // Count frames
-      if(m_frame_count-1 == m_benchmark_frame_start+m_warmup_frames) {
-        m_benchmark_frame_time = current_time; // Start timing.
-      }
-    }
-  }
-
-  {nvtx::ScopedRange r( "glutSwapBuffers" );
-    // Swap buffers
-    glutSwapBuffers();
-  }
+	// Swap buffers
+	glutSwapBuffers();
 }
 
 void GLUTDisplay::quit(int return_code)

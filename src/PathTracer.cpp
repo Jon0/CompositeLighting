@@ -41,7 +41,9 @@ void PathTracer::initScene(shared_ptr<Scene> s, bool prepare) {
 
 	setNumSamples(1);
 	setDimensions(960, 540);
-	if (prepare) resetScene();
+	if (prepare) {
+		resetScene();
+	}
 }
 
 // used by GLUTDisplay
@@ -69,7 +71,7 @@ void PathTracer::resetScene() {
 	optix_context["pathtrace_shadow_ray_type"]->setUint(1u);
 	optix_context["pathtrace_bsdf_shadow_ray_type"]->setUint(2u);
 	optix_context["rr_begin_depth"]->setUint(m_rr_begin_depth);
-	optix_context["display_mode"]->setUint(3);
+	optix_context["display_mode"]->setUint(1);
 
 	// buffers required for differential rendering
 	cout << "make buffers" << endl;
@@ -187,27 +189,10 @@ void PathTracer::trace(const RayGenCameraData& camera_data) {
 }
 
 void PathTracer::trace() {
-	if (m_camera_changed) {
-		float3 eye, U, V, W;
-		m_camera->getEyeUVW(eye, U, V, W);
-		//RayGenCameraData camera_data(eye, U, V, W);
-
-		cout << eye << U << V << W << endl;
-		m_context["eye"]->setFloat(eye);
-		m_context["U"]->setFloat(U);
-		m_context["V"]->setFloat(V);
-		m_context["W"]->setFloat(W);
-		m_camera_changed = false;
-		m_frame = 1;
-	}
-	m_context["frame_number"]->setUint(m_frame++);
-
-	// launch cuda
-	Buffer buffer = m_context["output_buffer"]->getBuffer();
-	RTsize buffer_width, buffer_height;
-	buffer->getSize(buffer_width, buffer_height);
-	m_context->launch(0, static_cast<unsigned int>(buffer_width),
-			static_cast<unsigned int>(buffer_height));
+    float3 eye, U, V, W;
+    m_camera->getEyeUVW( eye, U, V, W );
+    SampleScene::RayGenCameraData camera_data( eye, U, V, W );
+    trace( camera_data );
 }
 
 //-----------------------------------------------------------------------------
