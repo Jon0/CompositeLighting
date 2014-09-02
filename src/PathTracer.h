@@ -43,10 +43,12 @@ public:
 	PathTracer() :
 			m_rr_begin_depth(1u), m_max_depth(100u), m_sqrt_num_samples(0u),
 			m_width(512u), m_height(512u) {
-		lightmap_y_rot = 0.28f;
+		lightmap_y_rot = 0.28f; // should be in the scene.......
 	}
 
-	void initScene( shared_ptr<Scene>, bool );
+	void setScene( shared_ptr<Scene>, bool );
+
+
 	virtual void initScene(InitialCameraData& camera_data);
 
 	void trace();
@@ -61,6 +63,8 @@ public:
 		m_width = w;
 		m_height = h;
 	}
+
+	void setDisplayMode(unsigned int);
 
 private:
 	void resetScene();

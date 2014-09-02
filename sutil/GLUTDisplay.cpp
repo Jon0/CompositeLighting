@@ -290,7 +290,7 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   glewInit();
 
   // If m_app_continuous_mode was already set to CDBenchmark* on the command line then preserve it.
-  setContinuousMode( m_app_continuous_mode == CDNone ? continuous_mode : m_app_continuous_mode );
+  //setContinuousMode( m_app_continuous_mode == CDNone ? continuous_mode : m_app_continuous_mode );
 
 
   try {
@@ -306,7 +306,7 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
                                  camera_data.vfov,
                                  PinholeCamera::KeepVertical );
 
-    m_mouse = new Mouse( m_camera, buffer_width, buffer_height );
+    //m_mouse = new Mouse( m_camera, buffer_width, buffer_height );
   } catch( Exception& e ){
     sutilReportError( e.getErrorString().c_str() );
     exit(2);
@@ -334,30 +334,24 @@ void GLUTDisplay::run( const std::string& title, SampleScene* scene, contDraw_E 
   glViewport(0, 0, buffer_width, buffer_height);
 
   glutShowWindow();
-//
-//  // reshape window to the correct window resize
   glutReshapeWindow( buffer_width, buffer_height);
 //
 //  // Set callbacks
   glutKeyboardFunc(keyPressed);
   glutDisplayFunc(display);
-  glutMouseFunc(mouseButton);
-  glutMotionFunc(mouseMotion);
+  glutIdleFunc(idle);
+  //glutMouseFunc(mouseButton);
+  //glutMotionFunc(mouseMotion);
   glutReshapeFunc(resize);
 
   // Enter main loop
   glutMainLoop();
 }
 
-void GLUTDisplay::setCamera(SampleScene::InitialCameraData& camera_data)
-{
-  m_camera->setParameters(camera_data.eye,
-                         camera_data.lookat,
-                         camera_data.up,
-                         camera_data.vfov,
-                         camera_data.vfov,
-                         PinholeCamera::KeepVertical );
-  glutPostRedisplay();
+void GLUTDisplay::setCamera(SampleScene::InitialCameraData &camera_data) {
+	m_camera->setParameters(camera_data.eye, camera_data.lookat, camera_data.up,
+			camera_data.vfov, camera_data.vfov, PinholeCamera::KeepVertical);
+	glutPostRedisplay();
 }
 
 // This is an internal function that does the actual work.
@@ -665,7 +659,7 @@ void GLUTDisplay::resize(int width, int height)
 
   sutilCurrentTime( &m_start_time );
   m_scene->signalCameraChanged();
-  m_mouse->handleResize( width, height );
+  //m_mouse->handleResize( width, height );
 
   try {
     m_scene->resize(width, height);
@@ -695,6 +689,7 @@ void GLUTDisplay::displayFrame()
 {
   // Draw the resulting image
   Buffer buffer = m_scene->getOutputBuffer();
+  unsigned int vboId = buffer->getGLBOId();
   int buffer_width  = 960;
   int buffer_height = 540;
 
@@ -706,7 +701,7 @@ void GLUTDisplay::displayFrame()
 //    sutilDisplayFilePPM( fname, buffer->get() );
 //  }
 
-  unsigned int vboId = buffer->getGLBOId();
+
   if (vboId)
   {
     glBindTexture( GL_TEXTURE_2D, m_texId );

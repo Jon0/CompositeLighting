@@ -17,49 +17,42 @@ using namespace optix;
 
 namespace std {
 
-// for GLFW Display
-void PathTracer::initScene(shared_ptr<Scene> s, bool prepare) {
+void PathTracer::setScene(shared_ptr<Scene> s, bool prepare) {
 	scene = s;
 	//Texture &t = scene->getPhoto();
 	//setNumSamples(1);
 	//setDimensions(t.width(), t.height());
 
-
-	InitialCameraData initial_camera_data = InitialCameraData( make_float3( -42.067986f, 13.655909f, -7.266403f ), // eye
-                                     make_float3( 0.938559f, -0.304670f, 0.162117f ),    // lookat
-                                     make_float3( 0.300224f, 0.952457f, 0.051857f ),       // up
-                                     32.22f ); // vfov
-
-
-
-	  // Initialize camera according to scene params
-	m_camera = new PinholeCamera(initial_camera_data.eye,
-			initial_camera_data.lookat, initial_camera_data.up, -1.0f, // hfov is ignored when using keep vertical
-			initial_camera_data.vfov, PinholeCamera::KeepVertical);
-
-	m_camera->setup();
-
-	setNumSamples(1);
-	setDimensions(960, 540);
 	if (prepare) {
+		InitialCameraData initial_camera_data = InitialCameraData(
+				make_float3(-42.067986f, 13.655909f, -7.266403f), // eye
+				make_float3(0.938559f, -0.304670f, 0.162117f),    // lookat
+				make_float3(0.300224f, 0.952457f, 0.051857f),       // up
+				32.22f); // vfov
+
+		// Initialize camera according to scene params
+		m_camera = new PinholeCamera(initial_camera_data.eye,
+				initial_camera_data.lookat, initial_camera_data.up, -1.0f, // hfov is ignored when using keep vertical
+				initial_camera_data.vfov, PinholeCamera::KeepVertical);
+
+		m_camera->setAspectRatio(static_cast<float>(960)/540);
+
+		setNumSamples(1);
+		setDimensions(960, 540);
 		resetScene();
 	}
 }
 
 // used by GLUTDisplay
 void PathTracer::initScene(InitialCameraData& camera_data) {
-	setNumSamples(1);
-	setDimensions(960, 540);
-
-	// Set up camera
 	camera_data = InitialCameraData( make_float3( -42.067986f, 13.655909f, -7.266403f ), // eye
                                      make_float3( 0.938559f, -0.304670f, 0.162117f ),    // lookat
                                      make_float3( 0.300224f, 0.952457f, 0.051857f ),       // up
                                      32.22f ); // vfov
-	resetScene();
 }
 
 void PathTracer::resetScene() {
+	cout << "reset scene" << endl;
 	optix_context = optix::Context(m_context);
 	optix_context->setRayTypeCount(3);
 	optix_context->setEntryPointCount(1);
@@ -161,11 +154,15 @@ bool PathTracer::keyPressed(unsigned char key, int x, int y) {
 	}
 	else if (isdigit(key)) {
 		unsigned int newmode = key - '0';
-		std::cout << "set display mode " << newmode << std::endl;
-		m_context["display_mode"]->setUint(newmode);
+		setDisplayMode(newmode);
 		return true;
 	}
 	return false;
+}
+
+void PathTracer::setDisplayMode(unsigned int newmode) {
+	std::cout << "set display mode " << newmode << std::endl;
+	m_context["display_mode"]->setUint(newmode);
 }
 
 void PathTracer::trace(const RayGenCameraData& camera_data) {

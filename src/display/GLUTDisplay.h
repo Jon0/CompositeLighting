@@ -8,6 +8,8 @@
 #ifndef GLUTDISPLAY_H_
 #define GLUTDISPLAY_H_
 
+#include <Mouse.h>
+
 #include "../PathTracer.h"
 #include "GLrenderer.h"
 
@@ -23,7 +25,11 @@ public:
 
 	static PathTracer *ptr;
 	static GLrenderer *renderer;
+	static PinholeCamera *m_camera;
+	static unsigned int m_texId;
 
+
+	static void displayFrame();
 	static void display();
 	static void idle();
 };

@@ -4,8 +4,8 @@
 in vec2 ex_TexCoor;
 out vec4 color;
 
-uniform sampler2D texture;
+uniform sampler2DRect texture;
 
 void main(void) {
-	color = texture2D(texture, ex_TexCoor);
+	color = texture2DRect(texture, ex_TexCoor);
 }
