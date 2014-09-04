@@ -6,6 +6,8 @@
  */
 
 #include <iostream>
+#include <string>
+#include <time.h>
 
 #include "GLFWDisplay.h"
 
@@ -13,11 +15,20 @@ namespace std {
 
 PathTracer *GLFWDisplay::ptr;
 
+string getTime() {
+    time_t timeObj;
+    time(&timeObj);
+    tm *pTime = gmtime(&timeObj);
+    char buffer[100];
+    sprintf(buffer, "%d_%d_%d", pTime->tm_hour, pTime->tm_min, pTime->tm_sec);
+    return buffer;
+}
+
 GLFWDisplay::GLFWDisplay() {
 	if (!glfwInit()) return;
 
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
-	window = glfwCreateWindow(100, 100, "Window", NULL, NULL);
+	window = glfwCreateWindow(100, 100, "", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
 	// Initialize GLEW
@@ -48,6 +59,7 @@ void GLFWDisplay::run(PathTracer &pt) {
     int height = static_cast<int>(buffer_height_rts);
 
     // complete window setup
+    glfwSetWindowTitle(window, "path_tracer");
     glfwSetWindowSize(window, width, height);
     glfwSetKeyCallback(window, keyFunc);
 
@@ -79,6 +91,22 @@ void GLFWDisplay::keyFunc(GLFWwindow *w, int key, int scan, int act, int) {
 	if (act == GLFW_PRESS && isdigit(key)) {
 		unsigned int newmode = key - '0';
 		ptr->setDisplayMode(newmode);
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_S) {
+		string fname = "outputs/out_"+getTime()+".ppm";
+		sutilDisplayFilePPM( fname.c_str(), ptr->getOutputBuffer()->get() );
+		cout << "saved as " << fname << endl;
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_UP) {
+		Scene &s = ptr->getScene();
+		s.modify(1.0f);
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_DOWN) {
+		Scene &s = ptr->getScene();
+		s.modify(-1.0f);
+	}
+	else if (act == GLFW_PRESS) {
+		ptr->keyPressed(key);
 	}
 }
 

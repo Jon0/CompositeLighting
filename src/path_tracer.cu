@@ -144,20 +144,21 @@ static __device__ float3 getRay(rtObject geometry, int outline) {
 	    	// eye ray
 	      Ray ray = make_Ray(ray_origin, ray_direction, pathtrace_ray_type, scene_epsilon, RT_DEFAULT_MAX);
 	      rtTrace(geometry, ray, prd);
+	      prd.result += prd.radiance * prd.attenuation;
+
 	      if(prd.done) {
-	        prd.result += prd.radiance * prd.attenuation;
 	        break;
 	      }
 
 	      // RR
-	      if(prd.depth >= rr_begin_depth){
+	      prd.depth++;
+	      if(prd.depth >= 0){
 	        float pcont = fmaxf(prd.attenuation);
 	        if(rnd(prd.seed) >= pcont)
 	          break;
-	        prd.attenuation /= pcont;
+	        prd.attenuation *= pcont;
 	      }
-	      prd.depth++;
-	      prd.result += prd.radiance * prd.attenuation;
+
 	      ray_origin = prd.origin;
 	      ray_direction = prd.direction;
 	    }
@@ -176,9 +177,10 @@ static __device__ float3 getRay(rtObject geometry, int outline) {
 
 static __device__ float4 getDifferential() {
 
+	// red for virtual geometry
 	float geomWeight = output_buffer_virt_out[launch_index].x;
 
-	//float localWeight = output_buffer_local_out[launch_index].x;
+	// green for local geometry
 	float localWeight = output_buffer_virt_out[launch_index].y;
 
 	float nongeomWeight = 1.0f - geomWeight;
@@ -189,18 +191,12 @@ static __device__ float4 getDifferential() {
 	out += nonlocalWeight * nongeomWeight * output_buffer_empty[launch_index];
 
 	// local * m = geom
-	float4 m0 = output_buffer_all[launch_index] / output_buffer_local[launch_index];
+	// +0.01f to avoid divide by zero
+	float4 m0 = (output_buffer_all[launch_index]+0.01f) / (output_buffer_local[launch_index]+0.01f);
 	out += localWeight * nongeomWeight * output_buffer_empty[launch_index] * m0;
 
-	// is there a clamp function?
-	if (out.x > 1.0f) out.x = 1.0f;
-	else if (out.x < 0.0f) out.x = 0.0f;
-	if (out.y > 1.0f) out.y = 1.0f;
-	else if (out.y < 0.0f) out.y = 0.0f;
-	if (out.z > 1.0f) out.z = 1.0f;
-	else if (out.z < 0.0f) out.z = 0.0f;
-	if (out.w > 1.0f) out.w = 1.0f;
-	else if (out.w < 0.0f) out.w = 0.0f;
+	// doesnt work?
+	out = clamp(out, 0.0f, 1.0f);
 
 	return out;
 }
@@ -211,9 +207,6 @@ static __device__ float4 getDifferential() {
 //
 //-----------------------------------------------------------------------------
 RT_PROGRAM void pathtrace_camera() {
-	//output_buffer[launch_index] = make_float4(launch_index.x / 1000.0f, launch_index.y / 1000.0f, 0.0f, 0.0f);
-	//return;
-
 	float3 pixel_color_local = getRay(local_object, 0);
 	float3 pixel_color_all = getRay(top_object, 0);
 
@@ -233,7 +226,7 @@ RT_PROGRAM void pathtrace_camera() {
 			output_buffer_virt_out[launch_index] = make_float4(a * getRay(top_object, 1) + b * old_color_out, 0.0f);
 		}
 	} else {
-		// reset continuous buffers
+		// reset buffers
 		output_buffer_local[launch_index] = make_float4( pixel_color_local, 0.0f );
 		output_buffer_all[launch_index] = make_float4( pixel_color_all, 0.0f );
 		output_buffer_virt_out[launch_index] = make_float4( getRay(top_object, 1), 0.0f );
@@ -315,7 +308,7 @@ RT_PROGRAM void diffuse() {
 		current_prd.direction = v1 * p.x + v2 * p.y + ffnormal * p.z;
 	//}
 
-	float3 normal_color = (normalize(world_shading_normal) * 0.5f + 0.5f) * 0.9;
+	//float3 normal_color = (normalize(world_shading_normal) * 0.5f + 0.5f) * 0.9;
 	current_prd.attenuation = current_prd.attenuation * diffuse_color; // use the diffuse_color as the diffuse response
 	current_prd.countEmitted = false;
 
@@ -383,7 +376,7 @@ RT_PROGRAM void miss() {
 	float u = (theta + M_PIf) * (0.5f * M_1_PIf);
 	float v = 0.5f * (1.0f + sin(phi));
 	float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-	emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
+	//emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
 	current_prd.radiance = emap;
 	current_prd.done = true;
 }

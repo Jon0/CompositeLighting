@@ -13,10 +13,15 @@ GLFWDisplay d;
 //
 //-----------------------------------------------------------------------------
 int main(int argc, char** argv) {
+	if (argc != 2) {
+		cout << "argument must specify config file" << endl;
+		exit(1);
+	}
+
 	// Construct the scene
 	// This specifies scene geometry, light map and camera angle
 	shared_ptr<Scene> scene = make_shared<Scene>();
-	scene->loadConfig("config.txt");
+	scene->loadConfig(argv[1]);
 
 	// uses scene to produce rendering
 	PathTracer pt;

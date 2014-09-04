@@ -23,6 +23,14 @@ using namespace Imf;
 using namespace std;
 using namespace optix;
 
+//emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
+float t(float i) {
+	return i + 2*powf(i, 2.0f) + 4*powf(i, 3.0f)+ 3*powf(i, 4.0f) + 2*powf(i, 5.0f);
+
+}
+
+
+
 optix::TextureSampler loadExrTexture(const char fileName[],
 		optix::Context context, const float3& default_color) {
 	std::cout << "Reading " << fileName << std::endl;
@@ -62,9 +70,9 @@ optix::TextureSampler loadExrTexture(const char fileName[],
 			unsigned int buf_index = (j * nx + i) * 4;
 
 			Imf::Rgba pix = pixels[ny - j - 1][nx - i - 1];
-			buffer_data[buf_index + 0] = pix.r;
-			buffer_data[buf_index + 1] = pix.g;
-			buffer_data[buf_index + 2] = pix.b;
+			buffer_data[buf_index + 0] = t(pix.r);
+			buffer_data[buf_index + 1] = t(pix.g);
+			buffer_data[buf_index + 2] = t(pix.b);
 			buffer_data[buf_index + 3] = 1.0f;
 
 //			buffer_data[buf_index + 0] = rgba[ppm_index * 4 + 0];

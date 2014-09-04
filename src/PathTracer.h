@@ -32,27 +32,34 @@
 
 namespace std {
 
+const char* const ptxpath( const std::string&, const std::string& );
+
 //-----------------------------------------------------------------------------
 //
 // PathTracer
 //
 //-----------------------------------------------------------------------------
-class PathTracer: public SampleScene {
+class PathTracer {
 public:
 	// Set the actual render parameters below in main().
 	PathTracer() :
 			m_rr_begin_depth(1u), m_max_depth(100u), m_sqrt_num_samples(0u),
-			m_width(512u), m_height(512u) {
+			m_width(512u), m_height(512u), m_camera_changed( true ), m_use_vbo_buffer( true ),
+			m_num_devices( 0 ), m_cpu_rendering_enabled( false ) {
+		optix_context = optix::Context::create();
 		lightmap_y_rot = 0.28f; // should be in the scene.......
 	}
 
+
+	Scene &getScene();
 	void setScene( shared_ptr<Scene>, bool );
 
+	void keyPressed(unsigned char key);
 
-	virtual void initScene(InitialCameraData& camera_data);
+	virtual void initScene(SampleScene::InitialCameraData& camera_data);
 
 	void trace();
-	virtual void trace(const RayGenCameraData& camera_data);
+	virtual void trace(const SampleScene::RayGenCameraData& camera_data);
 	virtual optix::Buffer getOutputBuffer();
 
 	void setNumSamples(unsigned int sns) {
@@ -89,6 +96,11 @@ private:
 	unsigned int m_frame;
 	unsigned int m_sampling_strategy;
 	float lightmap_y_rot;
+
+	bool m_camera_changed;
+	bool m_use_vbo_buffer;
+	int m_num_devices;
+	bool m_cpu_rendering_enabled;
 
 	// scene to path trace
 	shared_ptr<Scene> scene;

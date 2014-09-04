@@ -30,14 +30,10 @@ vector<string> split(const string &s, char delim) {
 }
 
 Scene::Scene() {
+	config_loaded = false;
 	float scale = 1.0f;
 
-	// input camera location
-
-	// input light map
-	//lightmap_path = "resource/outside.ppm";
-	//lightmap_path = "resource/ennis.exr";
-	lightmap_path = "resource/vuw_quad_hdr_5024.exr";
+	// TODO input camera location
 
 	// input local models
 	addModel(local_models, "/base.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
@@ -64,6 +60,19 @@ Scene::Scene() {
 
 Scene::~Scene() {}
 
+string Scene::photoPath() {
+	return options["photo"];
+}
+
+string Scene::lightMapPath() {
+	// input light map
+	//lightmap_path = "resource/outside.ppm";
+	//lightmap_path = "resource/ennis.exr";
+	return options["lightmap"];
+}
+
+
+
 void Scene::addOption(string op) {
 	vector<string> ss = split(op, '=');
     if (ss.size() == 2) {
@@ -72,11 +81,15 @@ void Scene::addOption(string op) {
 }
 
 void Scene::loadConfig(string fname) {
-	cout << "config file = " << fname << endl;
 	ifstream ifs(fname, ifstream::in);
+	if (!ifs) {
+		throw runtime_error(fname + " not found");
+	}
+	cout << "config file = " << fname << endl;
     for (string line; getline(ifs, line); ) {
     	addOption(line);
     }
+    config_loaded = true;
 }
 
 Texture &Scene::getPhoto() {
@@ -90,7 +103,6 @@ void Scene::init(optix::Context &m_context) {
 	virtgroup = context->createGroup();
 	emptygroup = context->createGroup();
 	virtualGeometry(options["directory"]);
-	photo.init(context, "output_buffer_empty", "resource/ot.ppm");	// load photo from ppm file
 }
 
 void Scene::addModel(vector<Model> &set, string fname, float scale, optix::float3 pos, optix::float3 c) {
@@ -132,9 +144,12 @@ void Scene::virtualGeometry( const std::string& path ) {
 	cout << "make geometry and materials" << endl;
 	optix::Material material = createMaterials(context, "diffuse");
 
-	string full_path = string( sutilSamplesDir() ) + lightmap_path;
+	// load photo ppm
+	photo.init(context, "output_buffer_empty", path + photoPath());	// load photo from ppm file
+
+	string full_path = path + lightMapPath();
 	const optix::float3 default_color = optix::make_float3( 0.8f, 0.88f, 0.97f );
-	context["envmap"]->setTextureSampler( loadExrTexture( lightmap_path.c_str(), context, default_color) );
+	context["envmap"]->setTextureSampler( loadExrTexture( full_path.c_str(), context, default_color) );
 
 	// Load OBJ files and set as geometry groups
 	cout << "reading " << (local_models.size() + models.size()) << " models" << endl;
@@ -176,6 +191,7 @@ optix::GeometryInstance Scene::makeGeometry( optix::Context &m_context, const st
 	optix::GeometryGroup model_group = m_context->createGeometryGroup();
 	ObjLoader objloader0((path + model.filepath).c_str(), m_context,
 			model_group, material);
+	objloader0.setBboxProgram(m_pgram_bounding_box);
 	objloader0.setIntersectProgram(m_pgram_intersection);
 	objloader0.load(model.transform);
 
