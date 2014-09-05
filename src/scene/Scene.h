@@ -17,18 +17,10 @@
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
 
+#include "../geometry/PolygonMesh.h"
 #include "../texture/PPMTexture.h"
 
 namespace std {
-
-struct Model {
-	string filepath;
-	optix::Matrix4x4 transform; // initial value
-	optix::Transform tr;		// updated value
-	optix::float3 colour;
-	optix::float3 position;
-};
-
 
 /**
  * Contains scene setup information read from config file
@@ -58,7 +50,7 @@ public:
 private:
 	map<string, string> options;
 	optix::Context context;
-	vector<Model> models, local_models;
+	vector<PolygonMesh> models, local_models;
 
 	optix::Group maingroup;
 	optix::Group localgroup;
@@ -77,17 +69,8 @@ private:
 
 	void addOption(string);
 
-	void addModel(vector<Model> &, string fname, float scale, optix::float3 pos, optix::float3 c);
+	void addModel(vector<PolygonMesh> &, string fname, float scale, optix::float3 pos, optix::float3 c);
 	void virtualGeometry( const std::string& path );
-
-	optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, Model &, optix::Material);
-
-	void setPosition(optix::Transform &, optix::float3);
-
-	void setMaterial( optix::GeometryInstance& gi,
-						optix::Material material,
-	                    const std::string& color_name,
-	                    const optix::float3& color);
 
 	void makeMaterialPrograms( optix::Material material, const char *filename,
 	                                                            const char *ch_program_name,

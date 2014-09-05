@@ -23,16 +23,16 @@
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
 #include <optixu/optixu_aabb_namespace.h>
-#include "intersection_refinement.h"
+#include "geometry/intersection_refinement.h"
 #include "helpers.h"
 
 // This is to be plugged into an RTgeometry object to represent
 // a triangle mesh with a vertex buffer of triangle soup (triangle list)
 // with an interleaved position, normal, texturecoordinate layout.
-rtBuffer<float3> vertex_buffer;     
+rtBuffer<float3> vertex_buffer;
 rtBuffer<float3> normal_buffer;
 rtBuffer<float2> texcoord_buffer;
-rtBuffer<int3>   vindex_buffer;    // position indices 
+rtBuffer<int3>   vindex_buffer;    // position indices
 rtBuffer<int3>   nindex_buffer;    // normal indices
 rtBuffer<int3>   tindex_buffer;    // texcoord indices
 
@@ -43,7 +43,7 @@ rtDeclareVariable(float,        scene_epsilon, , );
 rtDeclareVariable(int,          max_depth, , );
 rtDeclareVariable(unsigned int, radiance_ray_type, , );
 rtDeclareVariable(unsigned int, shadow_ray_type, , );
-rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
+rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float3, front_hit_point, attribute front_hit_point, );
 rtDeclareVariable(float3, back_hit_point, attribute back_hit_point, );
 
@@ -109,7 +109,7 @@ RT_PROGRAM void closest_hit_radiance()
 
   float reflection = 1.0f;
   float3 result = make_float3(0.0f);
-  
+
   const int depth = prd_radiance.depth;
 
   float3 beer_attenuation;
@@ -149,7 +149,7 @@ RT_PROGRAM void closest_hit_radiance()
   if (depth < min(reflection_maxdepth, max_depth))
   {
     r = reflect(i, n);
-  
+
     float importance = prd_radiance.importance * reflection * optix::luminance( reflection_color * beer_attenuation );
     if ( importance > importance_cutoff ) {
       color = TraceRay( fhp, r, depth+1, importance );

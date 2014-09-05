@@ -29,6 +29,7 @@ if(GLUT_FOUND AND OPENGL_FOUND)
     "display/*.cpp"
     "exr/*.cpp"
     "geometry/*.cpp"
+    "geometry/*.cu"
     "scene/*.cpp"
     "texture/*.cpp"
   )

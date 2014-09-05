@@ -102,10 +102,11 @@ void Scene::init(optix::Context &m_context) {
 	localgroup = context->createGroup();
 	virtgroup = context->createGroup();
 	emptygroup = context->createGroup();
+	PolygonMesh::initialise(context);
 	virtualGeometry(options["directory"]);
 }
 
-void Scene::addModel(vector<Model> &set, string fname, float scale, optix::float3 pos, optix::float3 c) {
+void Scene::addModel(vector<PolygonMesh> &set, string fname, float scale, optix::float3 pos, optix::float3 c) {
 	Model m;
 	m.filepath = fname;
 	float f[4*4] = {
@@ -117,7 +118,7 @@ void Scene::addModel(vector<Model> &set, string fname, float scale, optix::float
 	m.transform = optix::Matrix4x4(f);
 	m.colour = c;
 	m.position = pos;
-	set.push_back(m);
+	set.push_back(PolygonMesh(m));
 }
 
 void Scene::setMeshPrograms(optix::Program bb, optix::Program inter) {
@@ -132,8 +133,7 @@ void Scene::setMaterialPrograms(optix::Program ch, optix::Program ah) {
 
 void Scene::modify(float k) {
 	for (int i = 0; i < models.size(); ++i) {
-		models[i].position.y += k;
-		setPosition(models[i].tr, models[i].position);
+		models[i].move(0.0f, k, 0.0f);
 	}
 
 	maingroup->getAcceleration()->markDirty();
@@ -160,21 +160,21 @@ void Scene::virtualGeometry( const std::string& path ) {
 
 	// setup each model
 	for (int i = 0; i < models.size(); ++i) {
-		optix::GeometryInstance gi = makeGeometry(context, path, models[i], material);
+		optix::GeometryInstance gi = models[i].makeGeometry(context, path, material);
 		optix::Variable v = gi->declareVariable("outline_color");
 		v->set3fv(new float[3]{1.0, 0.0, 0.0});
-		maingroup->setChild(i, models[i].tr);
-		virtgroup->setChild(i, models[i].tr);
+		maingroup->setChild(i, models[i].get());
+		virtgroup->setChild(i, models[i].get());
 	}
 
 
 	// local models go in both groups
 	for (int i = 0; i < local_models.size(); ++i) {
-		optix::GeometryInstance gi = makeGeometry(context, path, local_models[i], material);
+		optix::GeometryInstance gi = local_models[i].makeGeometry(context, path, material);
 		optix::Variable v = gi->declareVariable("outline_color");
 		v->set3fv(new float[3]{0.0, 1.0, 0.0});
-		maingroup->setChild(models.size() + i, local_models[i].tr);
-		localgroup->setChild(i, local_models[i].tr);
+		maingroup->setChild(models.size() + i, local_models[i].get());
+		localgroup->setChild(i, local_models[i].get());
 	}
 
 	maingroup->setAcceleration(context->createAcceleration("Bvh", "Bvh")); // MedianBvh, BvhSingle
@@ -185,44 +185,6 @@ void Scene::virtualGeometry( const std::string& path ) {
 	context["local_object"]->set(localgroup);
 	context["virt_object"]->set(virtgroup);
 	context["empty_object"]->set(emptygroup);
-}
-
-optix::GeometryInstance Scene::makeGeometry( optix::Context &m_context, const std::string& path, Model &model, optix::Material material ) {
-	optix::GeometryGroup model_group = m_context->createGeometryGroup();
-	ObjLoader objloader0((path + model.filepath).c_str(), m_context,
-			model_group, material);
-	objloader0.setBboxProgram(m_pgram_bounding_box);
-	objloader0.setIntersectProgram(m_pgram_intersection);
-	objloader0.load(model.transform);
-
-
-	model.tr = context->createTransform();
-	model.tr->setChild(model_group);
-	setPosition(model.tr, model.position);
-
-
-	optix::GeometryInstance gi = model_group->getChild(0);
-	setMaterial(gi, material, "diffuse_color", model.colour);
-	return gi;
-}
-
-void Scene::setPosition(optix::Transform &t, optix::float3 p) {
-	float mod[4*4] = {
-			1,  0,  0,	p.x,
-            0,  1,  0,  p.y,
-            0,  0,  1,  p.z,
-            0,  0,  0,  1.0
-	};
-	const optix::Matrix4x4 id(mod);
-	t->setMatrix( false, id.getData(), 0 );
-}
-
-void Scene::setMaterial( optix::GeometryInstance& gi,
-									optix::Material material,
-                                   const std::string& color_name,
-                                   const optix::float3& color) {
-	gi->addMaterial(material);
-	gi[color_name]->setFloat(color);
 }
 
 void Scene::makeMaterialPrograms( optix::Material material, const char *filename,
