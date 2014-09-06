@@ -17,6 +17,8 @@ public:
 	PointCloud();
 	virtual ~PointCloud();
 
+	void load(optix::Context);
+
 	static void initialise(optix::Context);
 
 private:
