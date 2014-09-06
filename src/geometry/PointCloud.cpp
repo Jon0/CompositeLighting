@@ -43,13 +43,16 @@ void PointCloud::load(optix::Context c) {
 		float a = rand();
 		float b = rand();
 		float c = rand();
-
 		float l = sqrtf(a*a+b*b+c*c);
 		a /= l;
 		b /= l;
 		c /= l;
-
+		vbuffer_data[i].x = a;
+		vbuffer_data[i].y = b;
+		vbuffer_data[i].z = c;
 	}
+
+	m_vbuffer->unmap();
 }
 
 } /* namespace std */
