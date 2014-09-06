@@ -17,10 +17,12 @@
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
 
-#include "../geometry/PolygonMesh.h"
+#include "../geometry/Geometry.h"
 #include "../texture/PPMTexture.h"
 
 namespace std {
+
+typedef vector<shared_ptr<Geometry>> geom_list;
 
 /**
  * Contains scene setup information read from config file
@@ -42,7 +44,6 @@ public:
 	Texture &getPhoto();
 	void init(optix::Context &);
 
-	void setMeshPrograms( optix::Program, optix::Program );
 	void setMaterialPrograms( optix::Program, optix::Program );
 
 	void modify(float k);
@@ -50,15 +51,11 @@ public:
 private:
 	map<string, string> options;
 	optix::Context context;
-	vector<PolygonMesh> models, local_models;
+	geom_list models, local_models;
 
 	optix::Group maingroup;
 	optix::Group localgroup;
-	optix::Group virtgroup;
 	optix::Group emptygroup;
-
-	optix::Program m_pgram_bounding_box;
-	optix::Program m_pgram_intersection;
 
 	optix::Program diffuse_ch;
 	optix::Program diffuse_ah;
@@ -69,14 +66,10 @@ private:
 
 	void addOption(string);
 
-	void addModel(vector<PolygonMesh> &, string fname, float scale, optix::float3 pos, optix::float3 c);
+	void addModel(geom_list &, string fname, float scale, optix::float3 pos, optix::float3 c);
 	void virtualGeometry( const std::string& path );
 
-	void makeMaterialPrograms( optix::Material material, const char *filename,
-	                                                            const char *ch_program_name,
-	                                                            const char *ah_program_name );
-
-	optix::Material createMaterials(optix::Context &m_context, string);
+	optix::Material createMaterials(string);
 };
 
 } /* namespace std */

@@ -13,6 +13,8 @@
 #include <ObjLoader.h>
 
 #include "../exr/imageio.h"
+#include "../geometry/PointCloud.h"
+#include "../geometry/PolygonMesh.h"
 #include "Scene.h"
 
 
@@ -56,6 +58,8 @@ Scene::Scene() {
 			optix::make_float3( 0.8f, 0.4f, 0.05f ));
 	addModel(models, "/dragon.obj", 20*scale, scale * optix::make_float3( -6.0f, 5.7f, 20.0f ),
 			optix::make_float3( 0.3f, 0.4f, 0.85f ));
+
+	models.push_back(make_shared<PointCloud>());
 }
 
 Scene::~Scene() {}
@@ -70,8 +74,6 @@ string Scene::lightMapPath() {
 	//lightmap_path = "resource/ennis.exr";
 	return options["lightmap"];
 }
-
-
 
 void Scene::addOption(string op) {
 	vector<string> ss = split(op, '=');
@@ -100,13 +102,13 @@ void Scene::init(optix::Context &m_context) {
 	context = optix::Context(m_context);
 	maingroup = context->createGroup();
 	localgroup = context->createGroup();
-	virtgroup = context->createGroup();
 	emptygroup = context->createGroup();
+	PointCloud::initialise(context);
 	PolygonMesh::initialise(context);
 	virtualGeometry(options["directory"]);
 }
 
-void Scene::addModel(vector<PolygonMesh> &set, string fname, float scale, optix::float3 pos, optix::float3 c) {
+void Scene::addModel(geom_list &set, string fname, float scale, optix::float3 pos, optix::float3 c) {
 	Model m;
 	m.filepath = fname;
 	float f[4*4] = {
@@ -118,12 +120,7 @@ void Scene::addModel(vector<PolygonMesh> &set, string fname, float scale, optix:
 	m.transform = optix::Matrix4x4(f);
 	m.colour = c;
 	m.position = pos;
-	set.push_back(PolygonMesh(m));
-}
-
-void Scene::setMeshPrograms(optix::Program bb, optix::Program inter) {
-	m_pgram_bounding_box = bb;
-	m_pgram_intersection = inter;
+	set.push_back(make_shared<PolygonMesh>(m));
 }
 
 void Scene::setMaterialPrograms(optix::Program ch, optix::Program ah) {
@@ -133,76 +130,60 @@ void Scene::setMaterialPrograms(optix::Program ch, optix::Program ah) {
 
 void Scene::modify(float k) {
 	for (int i = 0; i < models.size(); ++i) {
-		models[i].move(0.0f, k, 0.0f);
+		models[i]->move(0.0f, k, 0.0f);
 	}
-
 	maingroup->getAcceleration()->markDirty();
-	virtgroup->getAcceleration()->markDirty();
 }
 
 void Scene::virtualGeometry( const std::string& path ) {
 	cout << "make geometry and materials" << endl;
-	optix::Material material = createMaterials(context, "diffuse");
+	optix::Material material = createMaterials("diffuse");
 
 	// load photo ppm
 	photo.init(context, "output_buffer_empty", path + photoPath());	// load photo from ppm file
 
 	string full_path = path + lightMapPath();
-	const optix::float3 default_color = optix::make_float3( 0.8f, 0.88f, 0.97f );
-	context["envmap"]->setTextureSampler( loadExrTexture( full_path.c_str(), context, default_color) );
+	context["envmap"]->setTextureSampler( loadExrTexture( full_path.c_str(), context, false ) );
 
 	// Load OBJ files and set as geometry groups
 	cout << "reading " << (local_models.size() + models.size()) << " models" << endl;
 	maingroup->setChildCount( local_models.size() + models.size() );
 	localgroup->setChildCount( local_models.size() );
-	virtgroup->setChildCount( models.size() );
 	emptygroup->setChildCount( 0 );
 
 	// setup each model
 	for (int i = 0; i < models.size(); ++i) {
-		optix::GeometryInstance gi = models[i].makeGeometry(context, path, material);
+		optix::GeometryInstance gi = models[i]->makeGeometry(context, path, material);
 		optix::Variable v = gi->declareVariable("outline_color");
 		v->set3fv(new float[3]{1.0, 0.0, 0.0});
-		maingroup->setChild(i, models[i].get());
-		virtgroup->setChild(i, models[i].get());
+		maingroup->setChild(i, models[i]->get());
 	}
-
 
 	// local models go in both groups
 	for (int i = 0; i < local_models.size(); ++i) {
-		optix::GeometryInstance gi = local_models[i].makeGeometry(context, path, material);
+		optix::GeometryInstance gi = local_models[i]->makeGeometry(context, path, material);
 		optix::Variable v = gi->declareVariable("outline_color");
 		v->set3fv(new float[3]{0.0, 1.0, 0.0});
-		maingroup->setChild(models.size() + i, local_models[i].get());
-		localgroup->setChild(i, local_models[i].get());
+		maingroup->setChild(models.size() + i, local_models[i]->get());
+		localgroup->setChild(i, local_models[i]->get());
 	}
 
+	cout << "finished loading" << endl;
 	maingroup->setAcceleration(context->createAcceleration("Bvh", "Bvh")); // MedianBvh, BvhSingle
 	localgroup->setAcceleration(context->createAcceleration("Bvh", "Bvh"));
-	virtgroup->setAcceleration(context->createAcceleration("Bvh", "Bvh"));
 	emptygroup->setAcceleration(context->createAcceleration("Bvh", "Bvh"));
 	context["top_object"]->set(maingroup);
 	context["local_object"]->set(localgroup);
-	context["virt_object"]->set(virtgroup);
 	context["empty_object"]->set(emptygroup);
 }
 
-void Scene::makeMaterialPrograms( optix::Material material, const char *filename,
-                                                          const char *ch_program_name,
-                                                          const char *ah_program_name ) {
-	//optix::Program ch_program = m_context->createProgramFromPTXFile( ptxpath("path_tracer", filename), ch_program_name );
-	//optix::Program ah_program = m_context->createProgramFromPTXFile( ptxpath("path_tracer", filename), ah_program_name );
-	//material->setClosestHitProgram( 0, ch_program );
-	//material->setAnyHitProgram( 1, ah_program );
-}
+optix::Material Scene::createMaterials(string name) {
+	optix::Material material;
+	material = context->createMaterial();
+	material->setClosestHitProgram(0, diffuse_ch);
+	material->setAnyHitProgram(1, diffuse_ah);
 
-optix::Material Scene::createMaterials( optix::Context &m_context, string name) {
-	optix::Material material[1];
-	material[0] = m_context->createMaterial();
-	material[0]->setClosestHitProgram(0, diffuse_ch);
-	material[0]->setAnyHitProgram(1, diffuse_ah);
-
-  return material[0];
+  return material;
 }
 
 } /* namespace std */

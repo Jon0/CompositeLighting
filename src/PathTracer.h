@@ -47,7 +47,7 @@ public:
 			m_width(512u), m_height(512u), m_camera_changed( true ), m_use_vbo_buffer( true ),
 			m_num_devices( 0 ), m_cpu_rendering_enabled( false ) {
 		optix_context = optix::Context::create();
-		lightmap_y_rot = 0.28f; // should be in the scene.......
+		lightmap_y_rot = 0.28f; // TODO should be in the scene.......
 	}
 
 
@@ -56,11 +56,9 @@ public:
 
 	void keyPressed(unsigned char key);
 
-	virtual void initScene(SampleScene::InitialCameraData& camera_data);
-
 	void trace();
-	virtual void trace(const SampleScene::RayGenCameraData& camera_data);
-	virtual optix::Buffer getOutputBuffer();
+	void trace(const SampleScene::RayGenCameraData& camera_data);
+	optix::Buffer getOutputBuffer();
 
 	void setNumSamples(unsigned int sns) {
 		m_sqrt_num_samples = sns;
@@ -76,14 +74,9 @@ public:
 private:
 	void resetScene();
 
-	// Should return true if key was handled, false otherwise.
-	virtual bool keyPressed(unsigned char key, int x, int y);
-
 	PinholeCamera *m_camera;
 
 	optix::Context optix_context;
-	optix::Program bounding_box;
-	optix::Program intersection;
 	optix::Program diffuse_ch_out;
 	optix::Program diffuse_ch;
 	optix::Program diffuse_ah;

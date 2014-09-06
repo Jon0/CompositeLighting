@@ -18,8 +18,7 @@ Feel free to do whatever you want.
 #include <optixu/optixu_matrix_namespace.h>
 
 optix::TextureSampler loadExrTexture( const char fileName[],
-											optix::Context context,
-                                            const optix::float3& default_color);
+											optix::Context context, bool);
 
 
 namespace Imf {

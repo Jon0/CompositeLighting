@@ -105,7 +105,9 @@ void GLUTDisplay2::run(PathTracer &pt) {
 		// Set up scene
 		cout << "setup camera" << endl;
 		SampleScene::InitialCameraData camera_data;
-		ptr->initScene(camera_data);
+
+		// todo: get camera
+		//ptr->initScene(camera_data);
 
 		// Initialize camera according to scene params
 		m_camera = new PinholeCamera(camera_data.eye, camera_data.lookat,

@@ -8,7 +8,7 @@
 #ifndef POLYGONMESH_H_
 #define POLYGONMESH_H_
 
-#include <optixu/optixpp_namespace.h>
+#include "Geometry.h"
 
 namespace std {
 
@@ -21,18 +21,18 @@ struct Model {
 	optix::float3 position;
 };
 
-class PolygonMesh {
+class PolygonMesh: public Geometry {
 public:
 	PolygonMesh(Model &);
 	virtual ~PolygonMesh();
 
-	optix::Transform get();
+	virtual void move(float, float, float);
 
-	void move(float, float, float);
+	virtual optix::Transform get();
+
+	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, optix::Material);
 
 	void setPosition(optix::Transform &, optix::float3);
-
-	optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, optix::Material);
 
 	void setMaterial( optix::GeometryInstance& gi,
 						optix::Material material,

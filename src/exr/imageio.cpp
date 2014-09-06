@@ -32,7 +32,7 @@ float t(float i) {
 
 
 optix::TextureSampler loadExrTexture(const char fileName[],
-		optix::Context context, const float3& default_color) {
+		optix::Context context, bool adjust_levels) {
 	std::cout << "Reading " << fileName << std::endl;
 	Imf::Array2D < Imf::Rgba > pixels;
 	int width;
@@ -70,9 +70,18 @@ optix::TextureSampler loadExrTexture(const char fileName[],
 			unsigned int buf_index = (j * nx + i) * 4;
 
 			Imf::Rgba pix = pixels[ny - j - 1][nx - i - 1];
-			buffer_data[buf_index + 0] = t(pix.r);
-			buffer_data[buf_index + 1] = t(pix.g);
-			buffer_data[buf_index + 2] = t(pix.b);
+
+			if (adjust_levels) {
+				buffer_data[buf_index + 0] = t(pix.r);
+				buffer_data[buf_index + 1] = t(pix.g);
+				buffer_data[buf_index + 2] = t(pix.b);
+			}
+			else {
+				buffer_data[buf_index + 0] = pix.r;
+				buffer_data[buf_index + 1] = pix.g;
+				buffer_data[buf_index + 2] = pix.b;
+			}
+
 			buffer_data[buf_index + 3] = 1.0f;
 
 //			buffer_data[buf_index + 0] = rgba[ppm_index * 4 + 0];

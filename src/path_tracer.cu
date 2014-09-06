@@ -50,7 +50,6 @@ struct PerRayData_pathtrace_shadow {
 rtDeclareVariable(float,         scene_epsilon, , );
 rtDeclareVariable(rtObject,      top_object, , );
 rtDeclareVariable(rtObject,      local_object, , );
-rtDeclareVariable(rtObject,      virt_object, , );
 rtDeclareVariable(rtObject,      empty_object, , );
 
 // For camera

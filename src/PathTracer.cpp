@@ -82,14 +82,6 @@ void PathTracer::keyPressed(unsigned char key) {
 	}
 }
 
-// used by GLUTDisplay
-void PathTracer::initScene(SampleScene::InitialCameraData& camera_data) {
-	camera_data = SampleScene::InitialCameraData( make_float3( -42.067986f, 13.655909f, -7.266403f ), // eye
-                                     make_float3( 0.938559f, -0.304670f, 0.162117f ),    // lookat
-                                     make_float3( 0.300224f, 0.952457f, 0.051857f ),       // up
-                                     32.22f ); // vfov
-}
-
 void PathTracer::resetScene() {
 	//optix_context = optix::Context(m_context);
 	optix_context->setRayTypeCount(3);
@@ -135,20 +127,11 @@ void PathTracer::resetScene() {
 	m_sampling_strategy = 0;
 	optix_context["sampling_stategy"]->setInt(m_sampling_strategy);
 
-	// Create scene geometry
-	// setup mesh programs
-	cout << "create mesh programs" << endl;
-	string mesh_ptx_path = ptxpath("path_tracer", "triangle_mesh_iterative.cu");
-	bounding_box = optix_context->createProgramFromPTXFile(mesh_ptx_path, "mesh_bounds");
-	intersection = optix_context->createProgramFromPTXFile(mesh_ptx_path, "mesh_intersect");
-
 	// material programs
-	cout << "create material programs" << endl;
 	diffuse_ch_out = optix_context->createProgramFromPTXFile(ptxpath("path_tracer", "path_tracer.cu"), "diffuse_outline");
 	diffuse_ch = optix_context->createProgramFromPTXFile(ptxpath("path_tracer", "path_tracer.cu"), "diffuse");
 	diffuse_ah = optix_context->createProgramFromPTXFile(ptxpath("path_tracer", "path_tracer.cu"), "shadow");
 
-	scene->setMeshPrograms(bounding_box, intersection);
 	scene->setMaterialPrograms(diffuse_ch, diffuse_ah);
 	scene->init(optix_context);
 
@@ -157,14 +140,8 @@ void PathTracer::resetScene() {
 
 
 	// Finalize
-	cout << "compile programs" << endl;
 	optix_context->validate();
 	optix_context->compile();
-}
-
-bool PathTracer::keyPressed(unsigned char key, int x, int y) {
-	keyPressed(key);
-	return true;
 }
 
 void PathTracer::setDisplayMode(unsigned int newmode) {

@@ -8,20 +8,27 @@
 #ifndef POINTCLOUD_H_
 #define POINTCLOUD_H_
 
-#include <optixu/optixpp_namespace.h>
+#include "Geometry.h"
 
 namespace std {
 
-class PointCloud {
+class PointCloud: public Geometry {
 public:
 	PointCloud();
 	virtual ~PointCloud();
 
-	void load(optix::Context);
+	virtual void move(float, float, float);
+
+	virtual optix::Transform get();
+
+	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, optix::Material);
 
 	static void initialise(optix::Context);
 
 private:
+	optix::float3 initial_pos;
+	optix::Transform tr;
+
 	static bool initialised;
 	static optix::Program bounding_box;
 	static optix::Program intersection;
