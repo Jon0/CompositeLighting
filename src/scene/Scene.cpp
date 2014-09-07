@@ -33,39 +33,12 @@ vector<string> split(const string &s, char delim) {
 
 Scene::Scene() {
 	config_loaded = false;
-	float scale = 1.0f;
-
-	// TODO input camera location
-
-	// input local models
-	addModel(local_models, "/base.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
-			optix::make_float3( 0.9f, 0.9f, 0.9f ));
-	addModel(local_models, "/ycube.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
-			optix::make_float3( 1.0f, 0.913f, 0.137f ));
-	addModel(local_models, "/bcyl.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
-			optix::make_float3( 0.131f, 0.331f, 0.745f ));
-	addModel(local_models, "/gpipe.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
-			optix::make_float3( 0.031f, 0.804f, 0.101f ));
-	addModel(local_models, "/bpln.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
-			optix::make_float3( 0.08f, 0.08f, 0.08f ));
-
-	// input virtual models
-	addModel(models, "/cognacglass.obj", scale, scale * optix::make_float3( 0.0f, 0.0f, -8.0f ),
-			optix::make_float3( 0.9f, 0.9f, 0.9f ));
-	addModel(models, "/wineglass.obj", scale, scale * optix::make_float3( 0.0f, 0.0f, 1.0f ),
-			optix::make_float3( 0.3f, 0.8f, 0.3f ));
-	addModel(models, "/waterglass.obj", scale, scale * optix::make_float3( -5.0f, 0.0f, 1.0f ),
-			optix::make_float3( 0.8f, 0.4f, 0.05f ));
-	addModel(models, "/dragon.obj", 20*scale, scale * optix::make_float3( -6.0f, 5.7f, 20.0f ),
-			optix::make_float3( 0.3f, 0.4f, 0.85f ));
-
-	models.push_back(make_shared<PointCloud>());
 }
 
 Scene::~Scene() {}
 
 string Scene::photoPath() {
-	return options["photo"];
+	return options["photo_color"];
 }
 
 string Scene::lightMapPath() {
@@ -95,7 +68,11 @@ void Scene::loadConfig(string fname) {
 }
 
 Texture &Scene::getPhoto() {
-	return photo;
+	return photo_color;
+}
+
+PinholeCamera *Scene::getCam() {
+	return camera;
 }
 
 void Scene::init(optix::Context &m_context) {
@@ -140,7 +117,10 @@ void Scene::virtualGeometry( const std::string& path ) {
 	optix::Material material = createMaterials("diffuse");
 
 	// load photo ppm
-	photo.init(context, "output_buffer_empty", path + photoPath());	// load photo from ppm file
+	photo_color.init(context, "output_buffer_empty", path + photoPath());	// load photo from ppm file
+	photo_depth.init(context, "output_buffer_depth", path + options["photo_depth"]);
+	setCamera();
+	models.push_back(make_shared<PointCloud>(photo_depth));
 
 	string full_path = path + lightMapPath();
 	context["envmap"]->setTextureSampler( loadExrTexture( full_path.c_str(), context, false ) );
@@ -184,6 +164,56 @@ optix::Material Scene::createMaterials(string name) {
 	material->setAnyHitProgram(1, diffuse_ah);
 
   return material;
+}
+
+void Scene::setCamera() {
+	// input camera location
+	optix::float3 eye = optix::make_float3(0.0f, 0.0f, -12.0f); // eye
+	optix::float3 lookat = optix::make_float3(0.0f, 0.0f, 0.0f);    // lookat
+	optix::float3 up = optix::make_float3(0.0f, 1.0f, 0.0f);       // up
+	float fov = 40.0f;
+
+	// Initialize camera according to scene params
+	camera = new PinholeCamera(eye, lookat, up, -1.0f, fov, PinholeCamera::KeepVertical);
+	camera->setAspectRatio(static_cast<float>(photo_color.width()) / photo_color.height());
+}
+
+void Scene::testSetup() {
+	float scale = 1.0f;
+
+	// input camera location
+	optix::float3 eye = optix::make_float3(-42.067986f, 13.655909f, -7.266403f); // eye
+	optix::float3 lookat = optix::make_float3(0.938559f, -0.304670f, 0.162117f);    // lookat
+	optix::float3 up = optix::make_float3(0.300224f, 0.952457f, 0.051857f);       // up
+	float fov = 32.22f;
+
+	// Initialize camera according to scene params
+	camera = new PinholeCamera(eye, lookat, up, -1.0f, fov, PinholeCamera::KeepVertical);
+	camera->setAspectRatio(static_cast<float>(960) / 540);
+
+	// input local models
+	addModel(local_models, "/base.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.9f, 0.9f, 0.9f ));
+	addModel(local_models, "/ycube.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 1.0f, 0.913f, 0.137f ));
+	addModel(local_models, "/bcyl.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.131f, 0.331f, 0.745f ));
+	addModel(local_models, "/gpipe.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.031f, 0.804f, 0.101f ));
+	addModel(local_models, "/bpln.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.08f, 0.08f, 0.08f ));
+
+	// input virtual models
+	addModel(models, "/cognacglass.obj", scale, scale * optix::make_float3( 0.0f, 0.0f, -8.0f ),
+			optix::make_float3( 0.9f, 0.9f, 0.9f ));
+	addModel(models, "/wineglass.obj", scale, scale * optix::make_float3( 0.0f, 0.0f, 1.0f ),
+			optix::make_float3( 0.3f, 0.8f, 0.3f ));
+	addModel(models, "/waterglass.obj", scale, scale * optix::make_float3( -5.0f, 0.0f, 1.0f ),
+			optix::make_float3( 0.8f, 0.4f, 0.05f ));
+	addModel(models, "/dragon.obj", 20*scale, scale * optix::make_float3( -6.0f, 5.7f, 20.0f ),
+			optix::make_float3( 0.3f, 0.4f, 0.85f ));
+
+	models.push_back(make_shared<PointCloud>());
 }
 
 } /* namespace std */

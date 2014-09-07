@@ -15,17 +15,20 @@ rtDeclareVariable(optix::Ray, ray, rtCurrentRay, );
 
 static __device__ inline float3 perp(float3 p, float a, float b) {
 	//return make_float3(a, b, 0);
-
-	return make_float3(p.y * a - p.z * b, - p.x * a, p.x * b);
+	return make_float3(p.y*a - p.z*b, p.z*b - p.x*a, p.x*b - p.y*a);
 }
 
 RT_PROGRAM void cloud_intersect(int primIdx) {
 	float3 p = vertex_buffer[primIdx];
 	float3 nrm = normal_buffer[primIdx];
 
-	float3 p0 = p + perp(nrm, 0.0, 0.5);
-	float3 p1 = p + perp(nrm, 0.4, -0.2);
-	float3 p2 = p + perp(nrm, -0.4, -0.2);
+
+	float3 tan = normalize( cross(nrm, make_float3(0.0f, 0.0f, 1.0f) ) );
+	float3 bitan = normalize( cross(nrm, tan ) );
+
+	float3 p0 = p + 0.05 * tan;
+	float3 p1 = p - 0.015 * tan + 0.045 * bitan;
+	float3 p2 = p - 0.015 * tan - 0.045 * bitan;
 
 	// Intersect ray with triangle
 	float3 n;
@@ -46,6 +49,6 @@ RT_PROGRAM void cloud_bounds (int primIdx, float result[6]) {
 
 	optix::Aabb* aabb = (optix::Aabb*) result;
 
-	aabb->m_min = p - make_float3(0.5f);
-	aabb->m_max = p + make_float3(0.5f);
+	aabb->m_min = p - make_float3(0.05f);
+	aabb->m_max = p + make_float3(0.05f);
 }

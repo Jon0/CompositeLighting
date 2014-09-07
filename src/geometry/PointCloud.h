@@ -8,6 +8,7 @@
 #ifndef POINTCLOUD_H_
 #define POINTCLOUD_H_
 
+#include "../texture/PPMTexture.h"
 #include "Geometry.h"
 
 namespace std {
@@ -15,6 +16,7 @@ namespace std {
 class PointCloud: public Geometry {
 public:
 	PointCloud();
+	PointCloud(PPMTexture &t);
 	virtual ~PointCloud();
 
 	virtual void move(float, float, float);

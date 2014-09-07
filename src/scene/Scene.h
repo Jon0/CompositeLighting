@@ -17,6 +17,8 @@
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
 
+#include <Mouse.h>
+
 #include "../geometry/Geometry.h"
 #include "../texture/PPMTexture.h"
 
@@ -36,12 +38,14 @@ public:
 	Scene();
 	virtual ~Scene();
 
+
+
 	string photoPath();
 	string lightMapPath();
-
+	Texture &getPhoto();
+	PinholeCamera *getCam();
 
 	void loadConfig(string);
-	Texture &getPhoto();
 	void init(optix::Context &);
 
 	void setMaterialPrograms( optix::Program, optix::Program );
@@ -60,7 +64,8 @@ private:
 	optix::Program diffuse_ch;
 	optix::Program diffuse_ah;
 
-	PPMTexture photo;
+	PinholeCamera *camera;
+	PPMTexture photo_color, photo_depth;
 
 	bool config_loaded;
 
@@ -70,6 +75,10 @@ private:
 	void virtualGeometry( const std::string& path );
 
 	optix::Material createMaterials(string);
+
+	void setCamera();
+
+	void testSetup();
 };
 
 } /* namespace std */

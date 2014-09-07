@@ -28,6 +28,20 @@ PointCloud::PointCloud() {
 	initial_pos = optix::make_float3(-10.0f, 2.0f, 0.0f);
 }
 
+PointCloud::PointCloud(PPMTexture &t) {
+	initial_pos = optix::make_float3(0.0f, 0.0f, 0.0f);
+
+	int w = t.width();
+	int h = t.height();
+
+	for (int x = 0; x < w; ++x) {
+
+	}
+
+
+
+}
+
 PointCloud::~PointCloud() {}
 
 void PointCloud::move(float, float, float) {
@@ -42,8 +56,7 @@ optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, const std::s
 	if (!initialised) {
 		throw runtime_error("point cloud programs not initialised");
 	}
-
-	unsigned int num_vertices = 3000;
+	unsigned int num_vertices = 100000;
 
 	// Create vertex buffer
 	optix::Buffer m_vbuffer = c->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, num_vertices);

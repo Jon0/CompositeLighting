@@ -43,13 +43,12 @@ class PathTracer {
 public:
 	// Set the actual render parameters below in main().
 	PathTracer() :
-			m_rr_begin_depth(1u), m_max_depth(100u), m_sqrt_num_samples(0u),
+			m_rr_begin_depth(1u), m_max_depth(100u), m_sqrt_num_samples(1u),
 			m_width(512u), m_height(512u), m_camera_changed( true ), m_use_vbo_buffer( true ),
 			m_num_devices( 0 ), m_cpu_rendering_enabled( false ) {
 		optix_context = optix::Context::create();
 		lightmap_y_rot = 0.28f; // TODO should be in the scene.......
 	}
-
 
 	Scene &getScene();
 	void setScene( shared_ptr<Scene>, bool );
@@ -73,8 +72,6 @@ public:
 
 private:
 	void resetScene();
-
-	PinholeCamera *m_camera;
 
 	optix::Context optix_context;
 	optix::Program diffuse_ch_out;

@@ -29,26 +29,8 @@ Scene &PathTracer::getScene() {
 
 void PathTracer::setScene(shared_ptr<Scene> s, bool prepare) {
 	scene = s;
-	//Texture &t = scene->getPhoto();
-	//setNumSamples(1);
-	//setDimensions(t.width(), t.height());
 
 	if (prepare) {
-		SampleScene::InitialCameraData initial_camera_data = SampleScene::InitialCameraData(
-				make_float3(-42.067986f, 13.655909f, -7.266403f), // eye
-				make_float3(0.938559f, -0.304670f, 0.162117f),    // lookat
-				make_float3(0.300224f, 0.952457f, 0.051857f),       // up
-				32.22f); // vfov
-
-		// Initialize camera according to scene params
-		m_camera = new PinholeCamera(initial_camera_data.eye,
-				initial_camera_data.lookat, initial_camera_data.up, -1.0f, // hfov is ignored when using keep vertical
-				initial_camera_data.vfov, PinholeCamera::KeepVertical);
-
-		m_camera->setAspectRatio(static_cast<float>(960)/540);
-
-		setNumSamples(1);
-		setDimensions(960, 540);
 		resetScene();
 	}
 }
@@ -83,7 +65,6 @@ void PathTracer::keyPressed(unsigned char key) {
 }
 
 void PathTracer::resetScene() {
-	//optix_context = optix::Context(m_context);
 	optix_context->setRayTypeCount(3);
 	optix_context->setEntryPointCount(1);
 	optix_context->setStackSize(2000);
@@ -95,12 +76,6 @@ void PathTracer::resetScene() {
 	optix_context["pathtrace_bsdf_shadow_ray_type"]->setUint(2u);
 	optix_context["rr_begin_depth"]->setUint(m_rr_begin_depth);
 	optix_context["display_mode"]->setUint(1);
-
-	// buffers required for differential rendering
-	final.init(optix_context, "output_buffer", m_width, m_height, true);
-	local.init(optix_context, "output_buffer_local", m_width, m_height, false);
-	all.init(optix_context, "output_buffer_all", m_width, m_height, false);
-	virt_out.init(optix_context, "output_buffer_virt_out", m_width, m_height, false);
 
 	// Declare these so validation will pass
 	optix_context["eye"]->setFloat(make_float3(0.0f, 0.0f, 0.0f));
@@ -135,9 +110,19 @@ void PathTracer::resetScene() {
 	scene->setMaterialPrograms(diffuse_ch, diffuse_ah);
 	scene->init(optix_context);
 
+	// buffers match size loaded by scene
+	Texture &t = scene->getPhoto();
+	setDimensions(t.width(), t.height());
+	cout << "buffer size = " << m_width << "x" << m_height << endl;
+
+	// buffers required for differential rendering
+	final.init(optix_context, "output_buffer", m_width, m_height, true);
+	local.init(optix_context, "output_buffer_local", m_width, m_height, false);
+	all.init(optix_context, "output_buffer_all", m_width, m_height, false);
+	virt_out.init(optix_context, "output_buffer_virt_out", m_width, m_height, false);
+
 	//enableCPURendering(false);
 	//setNumDevices( optix_context->getDeviceCount() );
-
 
 	// Finalize
 	optix_context->validate();
@@ -173,14 +158,9 @@ void PathTracer::trace(const SampleScene::RayGenCameraData& camera_data) {
 
 void PathTracer::trace() {
     float3 eye, U, V, W;
-    m_camera->getEyeUVW( eye, U, V, W );
+    scene->getCam()->getEyeUVW( eye, U, V, W );
     SampleScene::RayGenCameraData camera_data( eye, U, V, W );
     trace( camera_data );
-
-    //float3 lookat, up;
-    //float hfov, vfov;
-    //m_camera->getEyeLookUpFOV(eye, lookat, up, hfov, vfov);
-    //cout << '"' << eye << lookat << up << vfov << '"' << endl;
 }
 
 //-----------------------------------------------------------------------------
