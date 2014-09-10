@@ -16,6 +16,8 @@ public:
 
 	virtual int width() = 0;
 	virtual int height() = 0;
+
+	virtual float asF(int, int) = 0;
 };
 
 } /* namespace std */

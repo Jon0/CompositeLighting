@@ -16,7 +16,7 @@ namespace std {
 class PointCloud: public Geometry {
 public:
 	PointCloud();
-	PointCloud(PPMTexture &t);
+	PointCloud(vector<optix::float3>, vector<optix::float3>);
 	virtual ~PointCloud();
 
 	virtual void move(float, float, float);
@@ -30,6 +30,8 @@ public:
 private:
 	optix::float3 initial_pos;
 	optix::Transform tr;
+
+	vector<optix::float3> verts, normals;
 
 	static bool initialised;
 	static optix::Program bounding_box;

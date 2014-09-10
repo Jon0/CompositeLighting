@@ -33,6 +33,12 @@ inline int PPMTexture::height() {
 	return i_height;
 }
 
+float PPMTexture::asF(int x, int y) {
+	unsigned int ppm_index = ((i_height - y - 1) * i_width + i_width - x - 1) * 3;
+
+	return pixeldata[ppm_index + 0];
+}
+
 void PPMTexture::init(optix::Context &m_context, string name, int w, int h, bool useGL) {
 	cout << "making " << name << endl;
 	buf_name = name;
@@ -56,6 +62,7 @@ void PPMTexture::init(optix::Context &m_context, string name, string file) {
 	i_height = ppm.height();
 	int chan = 3;
 	unsigned char *pixels = ppm.raster();
+	pixeldata = new float [3*i_width*i_height];
 
 	optix::Variable output_buffer = m_context[buf_name];
 	optix::Buffer buffer = m_context->createBuffer( RT_BUFFER_OUTPUT, format, i_width, i_height);
@@ -70,6 +77,10 @@ void PPMTexture::init(optix::Context &m_context, string name, string file) {
 			buffer_data[buf_index + 1] = pixels[ppm_index + 1] / 256.0f;
 			buffer_data[buf_index + 2] = pixels[ppm_index + 2] / 256.0f;
 			buffer_data[buf_index + 3] = 1.0f;
+
+			pixeldata[ppm_index + 0] = pixels[ppm_index + 0] / 256.0f;
+			pixeldata[ppm_index + 1] = pixels[ppm_index + 1] / 256.0f;
+			pixeldata[ppm_index + 2] = pixels[ppm_index + 2] / 256.0f;
 		}
 	}
 

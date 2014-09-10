@@ -26,6 +26,8 @@ public:
 	virtual inline int width();
 	virtual inline int height();
 
+	virtual float asF(int, int);
+
 
 	void init(optix::Context &, string, int, int, bool);
 	void init(optix::Context &, string, string);
@@ -37,6 +39,8 @@ private:
 	int index, i_width, i_height;
 	GLuint addr;
 	RTformat format;
+
+	float *pixeldata;
 	optix::Buffer makeBuffer(optix::Context &m_context, bool useGL);
 };
 

@@ -25,21 +25,30 @@ void PointCloud::initialise(optix::Context c) {
 }
 
 PointCloud::PointCloud() {
-	initial_pos = optix::make_float3(-10.0f, 2.0f, 0.0f);
-}
-
-PointCloud::PointCloud(PPMTexture &t) {
 	initial_pos = optix::make_float3(0.0f, 0.0f, 0.0f);
 
-	int w = t.width();
-	int h = t.height();
+	// generate a sphere
+	unsigned int num_vertices = 500000;
+	for (int i = 0; i < num_vertices; ++i) {
+		float a = -1.0f + static_cast<float>(rand())
+						/ (static_cast<float>(RAND_MAX / 2.0f));
+		float b = -1.0f+ static_cast<float>(rand())
+						/ (static_cast<float>(RAND_MAX / 2.0f));
+		float c = -1.0f+ static_cast<float>(rand())
+						/ (static_cast<float>(RAND_MAX / 2.0f));
+		float l = sqrtf(a * a + b * b + c * c);
+		a /= l;
+		b /= l;
+		c /= l;
 
-	for (int x = 0; x < w; ++x) {
-
+		verts.push_back(initial_pos + 5.0f * optix::make_float3(a, b, c));
+		normals.push_back(optix::make_float3(a, b, c));
 	}
+}
 
-
-
+PointCloud::PointCloud(vector<optix::float3> v, vector<optix::float3> n) {
+	verts = v;
+	normals = n;
 }
 
 PointCloud::~PointCloud() {}
@@ -56,7 +65,7 @@ optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, const std::s
 	if (!initialised) {
 		throw runtime_error("point cloud programs not initialised");
 	}
-	unsigned int num_vertices = 100000;
+	unsigned int num_vertices = verts.size();
 
 	// Create vertex buffer
 	optix::Buffer m_vbuffer = c->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, num_vertices);
@@ -66,21 +75,10 @@ optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, const std::s
 	optix::Buffer m_nbuffer = c->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, num_vertices);
 	optix::float3* nbuffer_data = static_cast<optix::float3 *>(m_nbuffer->map());
 
-	// generate a sphere
+	// copy buffer
 	for (int i = 0; i < num_vertices; ++i) {
-		float a = -1.0f + static_cast<float>(rand())/(static_cast<float>(RAND_MAX/2.0f));
-		float b = -1.0f + static_cast<float>(rand())/(static_cast<float>(RAND_MAX/2.0f));
-		float c = -1.0f + static_cast<float>(rand())/(static_cast<float>(RAND_MAX/2.0f));
-		float l = sqrtf(a*a+b*b+c*c);
-		a /= l;
-		b /= l;
-		c /= l;
-		vbuffer_data[i].x = initial_pos.x + a * 5.0f;
-		vbuffer_data[i].y = initial_pos.y + b * 5.0f;
-		vbuffer_data[i].z = initial_pos.z + c * 5.0f;
-		nbuffer_data[i].x = a;
-		nbuffer_data[i].y = b;
-		nbuffer_data[i].z = c;
+		vbuffer_data[i] = verts[i];
+		nbuffer_data[i] = normals[i];
 	}
 	m_vbuffer->unmap();
 	m_nbuffer->unmap();
@@ -97,12 +95,9 @@ optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, const std::s
 	instance->addMaterial(material);
 	instance["diffuse_color"]->setFloat(optix::make_float3(0.85f, 0.85f, 0.85f));
 
-
-
 	optix::GeometryGroup model_group = c->createGeometryGroup();
 	model_group->setChildCount( 1 );
 	model_group->setChild(0, instance);
-
 
 	optix::Acceleration acceleration = c->createAcceleration("Bvh", "Bvh");
 	model_group->setAcceleration(acceleration);

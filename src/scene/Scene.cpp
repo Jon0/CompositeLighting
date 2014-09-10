@@ -13,6 +13,7 @@
 #include <ObjLoader.h>
 
 #include "../exr/imageio.h"
+#include "../geometry/ImageCoverter.h"
 #include "../geometry/PointCloud.h"
 #include "../geometry/PolygonMesh.h"
 #include "Scene.h"
@@ -33,6 +34,9 @@ vector<string> split(const string &s, char delim) {
 
 Scene::Scene() {
 	config_loaded = false;
+
+	addModel(models, "/dragon.obj", 5, optix::make_float3( 1.5f, -2.0f, 12.0f ),
+			optix::make_float3( 0.3f, 0.4f, 0.85f ));
 }
 
 Scene::~Scene() {}
@@ -119,8 +123,13 @@ void Scene::virtualGeometry( const std::string& path ) {
 	// load photo ppm
 	photo_color.init(context, "output_buffer_empty", path + photoPath());	// load photo from ppm file
 	photo_depth.init(context, "output_buffer_depth", path + options["photo_depth"]);
+
+	// camera setup must occur after image is loaded - to determine width and height
 	setCamera();
-	models.push_back(make_shared<PointCloud>(photo_depth));
+
+	ImageCoverter cc;
+	PointCloud cl = cc.makePointCloud(photo_depth, camera);
+	local_models.push_back(make_shared<PointCloud>(cl));
 
 	string full_path = path + lightMapPath();
 	context["envmap"]->setTextureSampler( loadExrTexture( full_path.c_str(), context, false ) );
