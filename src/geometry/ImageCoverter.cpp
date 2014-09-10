@@ -5,7 +5,7 @@
  *      Author: asdf
  */
 
-#include "/home/asdf/Optix/optixtest/src/geometry/ImageCoverter.h"
+#include "ImageCoverter.h"
 
 namespace std {
 
