@@ -116,6 +116,9 @@ if( NOT OPENEXR_FOUND )
   message( FATAL_ERROR "OpenExr is required" )
 endif()
 
+find_package(PCL 1.3 REQUIRED)
+find_package(OpenCV REQUIRED)
+
 set(GLEW_SOURCE "${CMAKE_SOURCE_DIR}/lib/glew-1.10.0/src/glew.c")
 add_subdirectory(lib/glfw-3.0.4)
 add_subdirectory(lib/glm)
@@ -124,10 +127,15 @@ add_subdirectory(lib/glm)
 include_directories(
   ${OptiX_INCLUDE}
   ${OPENEXR_INCLUDE_PATHS}
+  ${PCL_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIR}
   "${CMAKE_SOURCE_DIR}/lib"
   "${PROJECT_SOURCE_DIR}/lib/glew-1.10.0/include"
   "${CMAKE_SOURCE_DIR}/lib/glfw-3.0.4/include"
 )
+
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 add_library( glew STATIC
 	${GLEW_SOURCE}
@@ -210,6 +218,8 @@ function(OPTIX_add_executable target_name)
     glew
     glfw
     ${GLFW_LIBRARIES}
+    ${PCL_LIBRARIES}
+    ${OpenCV_LIBS}
   )
   if(USING_GNU_CXX)
     target_link_libraries( ${target_name} m ) # Explicitly link against math library (C samples don't do that by default)

@@ -8,9 +8,9 @@
 #ifndef IMAGECOVERTER_H_
 #define IMAGECOVERTER_H_
 
-#include <Mouse.h>
+#include <opencv2/core/core.hpp>
 
-#include "../texture/Texture.h"
+#include "../scene/Camera.h"
 #include "PointCloud.h"
 
 namespace std {
@@ -20,7 +20,7 @@ public:
 	ImageCoverter();
 	virtual ~ImageCoverter();
 
-	PointCloud makePointCloud(Texture &, PinholeCamera *);
+	PointCloud makePointCloud(cv::Mat &, Camera *);
 
 
 };

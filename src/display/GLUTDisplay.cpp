@@ -59,11 +59,7 @@ void GLUTDisplay2::displayFrame() {
 void GLUTDisplay2::display() {
 	cout << "frame" << endl;
 	try {
-		// render the scene
-		optix::float3 eye, U, V, W;
-		m_camera->getEyeUVW(eye, U, V, W);
-		SampleScene::RayGenCameraData camera_data(eye, U, V, W);
-		ptr->trace(camera_data);
+		ptr->trace();
 		displayFrame();
 	} catch (optix::Exception& e) {
 		sutilReportError(e.getErrorString().c_str());
@@ -104,15 +100,15 @@ void GLUTDisplay2::run(PathTracer &pt) {
 	try {
 		// Set up scene
 		cout << "setup camera" << endl;
-		SampleScene::InitialCameraData camera_data;
+		//SampleScene::InitialCameraData camera_data;
 
 		// todo: get camera
 		//ptr->initScene(camera_data);
 
 		// Initialize camera according to scene params
-		m_camera = new PinholeCamera(camera_data.eye, camera_data.lookat,
-				camera_data.up, -1.0f, // hfov is ignored when using keep vertical
-				camera_data.vfov, PinholeCamera::KeepVertical);
+		//m_camera = new PinholeCamera(camera_data.eye, camera_data.lookat,
+		//		camera_data.up, -1.0f, // hfov is ignored when using keep vertical
+		//		camera_data.vfov, PinholeCamera::KeepVertical);
 	} catch (optix::Exception& e) {
 		sutilReportError(e.getErrorString().c_str());
 		exit(2);

@@ -34,8 +34,14 @@ private:
 	GLFWwindow *window;
 	optix::Buffer shared_buffer;
 
+	static int mb1, mb2;
+	static double mx, my;
+	static Scene *sn;
+	static Camera *cam;
 	static PathTracer *ptr;
 	static void keyFunc(GLFWwindow *, int, int, int, int);
+	static void mouseFunc(GLFWwindow *, int, int, int);
+	static void posFunc(GLFWwindow *, double, double);
 
 };
 

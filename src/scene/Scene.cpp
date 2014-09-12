@@ -5,10 +5,6 @@
  *      Author: asdf
  */
 
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-
 #include <SampleScene.h>
 #include <ObjLoader.h>
 
@@ -16,77 +12,52 @@
 #include "../geometry/ImageCoverter.h"
 #include "../geometry/PointCloud.h"
 #include "../geometry/PolygonMesh.h"
+#include "../image/OptixImage.h"
 #include "Scene.h"
 
 
 namespace std {
 
-vector<string> split(const string &s, char delim) {
-    vector<string> elems;
-    stringstream ss(s);
-    string item;
-    while (getline(ss, item, delim)) {
-    	item.erase(remove(item.begin(), item.end(), ' '), item.end());
-        elems.push_back(item);
-    }
-    return elems;
-}
-
 Scene::Scene() {
-	config_loaded = false;
-
-	addModel(models, "/dragon.obj", 5, optix::make_float3( 1.5f, -2.0f, 12.0f ),
-			optix::make_float3( 0.3f, 0.4f, 0.85f ));
+	initialised = false;
+	modified = false;
+	addModel(models, "resource/dragon.obj", 5, optix::make_float3( 1.5f, -2.0f, 12.0f ),
+			optix::make_float3( 0.3f, 0.95f, 0.45f ));
 }
 
 Scene::~Scene() {}
 
-string Scene::photoPath() {
-	return options["photo_color"];
+void Scene::setPhoto(cv::Mat &c) {
+	photo_color = c;
+
+	// camera setup must occur after image is loaded - to determine width and height
+	setCamera();
 }
 
-string Scene::lightMapPath() {
-	// input light map
-	//lightmap_path = "resource/outside.ppm";
-	//lightmap_path = "resource/ennis.exr";
-	return options["lightmap"];
+void Scene::setDepthPhoto(cv::Mat &d) {
+	ImageCoverter cc;
+	PointCloud cl = cc.makePointCloud(d, &camera);
+	//cl.load(path+"scene1_0.pcd");
+	local_models.push_back(make_shared<PointCloud>(cl));
 }
 
-void Scene::addOption(string op) {
-	vector<string> ss = split(op, '=');
-    if (ss.size() == 2) {
-    	options.insert(make_pair(ss[0], ss[1]));
-    }
-}
-
-void Scene::loadConfig(string fname) {
-	ifstream ifs(fname, ifstream::in);
-	if (!ifs) {
-		throw runtime_error(fname + " not found");
-	}
-	cout << "config file = " << fname << endl;
-    for (string line; getline(ifs, line); ) {
-    	addOption(line);
-    }
-    config_loaded = true;
-}
-
-Texture &Scene::getPhoto() {
-	return photo_color;
-}
-
-PinholeCamera *Scene::getCam() {
-	return camera;
+void Scene::setLightMap(cv::Mat &lm) {
+	lightmap = lm;
 }
 
 void Scene::init(optix::Context &m_context) {
 	context = optix::Context(m_context);
-	maingroup = context->createGroup();
-	localgroup = context->createGroup();
-	emptygroup = context->createGroup();
-	PointCloud::initialise(context);
-	PolygonMesh::initialise(context);
-	virtualGeometry(options["directory"]);
+
+	// set image buffer vars
+	context["output_buffer_empty"]->set( makeBuffer(context, RT_BUFFER_OUTPUT, photo_color, false) );
+	//context["output_buffer_depth"]->set( makeBuffer(context, RT_BUFFER_OUTPUT, photo_depth, false) );
+
+	// set light map smapler
+	optix::Buffer lightmapBuffer = makeBuffer(context, RT_BUFFER_INPUT, lightmap, false);
+	context["envmap"]->setTextureSampler( makeSampler(context, lightmapBuffer) );
+
+	initGeometry();
+	initialised = true;
 }
 
 void Scene::addModel(geom_list &set, string fname, float scale, optix::float3 pos, optix::float3 c) {
@@ -114,35 +85,27 @@ void Scene::modify(float k) {
 		models[i]->move(0.0f, k, 0.0f);
 	}
 	maingroup->getAcceleration()->markDirty();
+	modified = true;
 }
 
-void Scene::virtualGeometry( const std::string& path ) {
+void Scene::initGeometry() {
 	cout << "make geometry and materials" << endl;
+
+	PointCloud::initialise(context);
+	PolygonMesh::initialise(context);
+
+	maingroup = context->createGroup();
+	localgroup = context->createGroup();
 	optix::Material material = createMaterials("diffuse");
-
-	// load photo ppm
-	photo_color.init(context, "output_buffer_empty", path + photoPath());	// load photo from ppm file
-	photo_depth.init(context, "output_buffer_depth", path + options["photo_depth"]);
-
-	// camera setup must occur after image is loaded - to determine width and height
-	setCamera();
-
-	ImageCoverter cc;
-	PointCloud cl = cc.makePointCloud(photo_depth, camera);
-	local_models.push_back(make_shared<PointCloud>(cl));
-
-	string full_path = path + lightMapPath();
-	context["envmap"]->setTextureSampler( loadExrTexture( full_path.c_str(), context, false ) );
 
 	// Load OBJ files and set as geometry groups
 	cout << "reading " << (local_models.size() + models.size()) << " models" << endl;
 	maingroup->setChildCount( local_models.size() + models.size() );
 	localgroup->setChildCount( local_models.size() );
-	emptygroup->setChildCount( 0 );
 
 	// setup each model
 	for (int i = 0; i < models.size(); ++i) {
-		optix::GeometryInstance gi = models[i]->makeGeometry(context, path, material);
+		optix::GeometryInstance gi = models[i]->makeGeometry(context, material);
 		optix::Variable v = gi->declareVariable("outline_color");
 		v->set3fv(new float[3]{1.0, 0.0, 0.0});
 		maingroup->setChild(i, models[i]->get());
@@ -150,20 +113,16 @@ void Scene::virtualGeometry( const std::string& path ) {
 
 	// local models go in both groups
 	for (int i = 0; i < local_models.size(); ++i) {
-		optix::GeometryInstance gi = local_models[i]->makeGeometry(context, path, material);
+		optix::GeometryInstance gi = local_models[i]->makeGeometry(context, material);
 		optix::Variable v = gi->declareVariable("outline_color");
 		v->set3fv(new float[3]{0.0, 1.0, 0.0});
 		maingroup->setChild(models.size() + i, local_models[i]->get());
 		localgroup->setChild(i, local_models[i]->get());
 	}
-
-	cout << "finished loading" << endl;
 	maingroup->setAcceleration(context->createAcceleration("Bvh", "Bvh")); // MedianBvh, BvhSingle
 	localgroup->setAcceleration(context->createAcceleration("Bvh", "Bvh"));
-	emptygroup->setAcceleration(context->createAcceleration("Bvh", "Bvh"));
 	context["top_object"]->set(maingroup);
 	context["local_object"]->set(localgroup);
-	context["empty_object"]->set(emptygroup);
 }
 
 optix::Material Scene::createMaterials(string name) {
@@ -183,8 +142,7 @@ void Scene::setCamera() {
 	float fov = 40.0f;
 
 	// Initialize camera according to scene params
-	camera = new PinholeCamera(eye, lookat, up, -1.0f, fov, PinholeCamera::KeepVertical);
-	camera->setAspectRatio(static_cast<float>(photo_color.width()) / photo_color.height());
+	camera.resize(photo_color.cols, photo_color.rows);
 }
 
 void Scene::testSetup() {
@@ -197,8 +155,7 @@ void Scene::testSetup() {
 	float fov = 32.22f;
 
 	// Initialize camera according to scene params
-	camera = new PinholeCamera(eye, lookat, up, -1.0f, fov, PinholeCamera::KeepVertical);
-	camera->setAspectRatio(static_cast<float>(960) / 540);
+	camera.resize(960, 540);
 
 	// input local models
 	addModel(local_models, "/base.obj", scale, optix::make_float3( 0.0f, 0.0f, 0.0f ),

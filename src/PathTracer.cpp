@@ -9,8 +9,7 @@
 
 #include <optixu/optixu_math_stream_namespace.h>
 
-#include <Mouse.h>
-
+#include "image/OptixImage.h"
 #include "PathTracer.h"
 
 using namespace optix;
@@ -29,7 +28,6 @@ Scene &PathTracer::getScene() {
 
 void PathTracer::setScene(shared_ptr<Scene> s, bool prepare) {
 	scene = s;
-
 	if (prepare) {
 		resetScene();
 	}
@@ -38,25 +36,18 @@ void PathTracer::setScene(shared_ptr<Scene> s, bool prepare) {
 void PathTracer::keyPressed(unsigned char key) {
 	//std::cout << lightmap_y_rot << std::endl;
 	if (key == 'J') {
-		m_camera_changed = true;
 		lightmap_y_rot += 0.01;
 		optix_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
 	}
 	else if (key == 'K') {
-		m_camera_changed = true;
 		lightmap_y_rot -= 0.01;
 		optix_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
 	}
 	else if (key == 'Q') {
-		m_camera_changed = true;
 		scene->modify(1.0f);
 	}
 	else if (key == 'W') {
-		m_camera_changed = true;
 		scene->modify(-1.0f);
-	}
-	else if (key == 'U') {
-		m_camera_changed = true;
 	}
 	else if (isdigit(key)) {
 		unsigned int newmode = key - '0';
@@ -78,10 +69,13 @@ void PathTracer::resetScene() {
 	optix_context["display_mode"]->setUint(1);
 
 	// Declare these so validation will pass
-	optix_context["eye"]->setFloat(make_float3(0.0f, 0.0f, 0.0f));
-	optix_context["U"]->setFloat(make_float3(0.0f, 0.0f, 0.0f));
-	optix_context["V"]->setFloat(make_float3(0.0f, 0.0f, 0.0f));
-	optix_context["W"]->setFloat(make_float3(0.0f, 0.0f, 0.0f));
+    float3 eye, U, V, W;
+    Camera *c = scene->getCam();
+	c->getEyeUVW( eye, U, V, W );
+	optix_context["eye"]->setFloat(eye);
+	optix_context["U"]->setFloat(U);
+	optix_context["V"]->setFloat(V);
+	optix_context["W"]->setFloat(W);
 
 	optix_context["sqrt_num_samples"]->setUint(m_sqrt_num_samples);
 	optix_context["bad_color"]->setFloat(0.0f, 1.0f, 0.0f);
@@ -111,15 +105,16 @@ void PathTracer::resetScene() {
 	scene->init(optix_context);
 
 	// buffers match size loaded by scene
-	Texture &t = scene->getPhoto();
-	setDimensions(t.width(), t.height());
+	cv::Mat &t = scene->getPhoto();
+	setDimensions(t.cols, t.rows);
 	cout << "buffer size = " << m_width << "x" << m_height << endl;
 
 	// buffers required for differential rendering
-	final.init(optix_context, "output_buffer", m_width, m_height, true);
-	local.init(optix_context, "output_buffer_local", m_width, m_height, false);
-	all.init(optix_context, "output_buffer_all", m_width, m_height, false);
-	virt_out.init(optix_context, "output_buffer_virt_out", m_width, m_height, false);
+	optix_context["output_buffer"]->set( makeBuffer(optix_context, RT_BUFFER_OUTPUT, m_width, m_height, true) );
+	optix_context["output_buffer_local"]->set( makeBuffer(optix_context, RT_BUFFER_OUTPUT, m_width, m_height, false) );
+	optix_context["output_buffer_all"]->set( makeBuffer(optix_context, RT_BUFFER_OUTPUT, m_width, m_height, false) );
+	optix_context["output_buffer_virt_out"]->set( makeBuffer(optix_context, RT_BUFFER_OUTPUT, m_width, m_height, false) );
+
 
 	//enableCPURendering(false);
 	//setNumDevices( optix_context->getDeviceCount() );
@@ -134,16 +129,22 @@ void PathTracer::setDisplayMode(unsigned int newmode) {
 	optix_context["display_mode"]->setUint(newmode);
 }
 
-void PathTracer::trace(const SampleScene::RayGenCameraData& camera_data) {
-	if (m_camera_changed) {
-		//cout << camera_data.eye << camera_data.U << camera_data.V << camera_data.W << endl;
-		optix_context["eye"]->setFloat(camera_data.eye);
-		optix_context["U"]->setFloat(camera_data.U);
-		optix_context["V"]->setFloat(camera_data.V);
-		optix_context["W"]->setFloat(camera_data.W);
-		m_camera_changed = false;
+void PathTracer::trace() {
+    if (scene->isModified()) {
+        Camera *c = scene->getCam();
+    	c->update(0.0f);
+
+        float3 eye, U, V, W;
+    	c->getEyeUVW( eye, U, V, W );
+
+		cout << eye << U << V << W << endl;
+		optix_context["eye"]->setFloat(eye);
+		optix_context["U"]->setFloat(U);
+		optix_context["V"]->setFloat(V);
+		optix_context["W"]->setFloat(W);
 		m_frame = 1;
-	}
+		scene->setModified(false);
+    }
 	optix_context["frame_number"]->setUint(m_frame++);
 
 	// launch cuda
@@ -152,15 +153,6 @@ void PathTracer::trace(const SampleScene::RayGenCameraData& camera_data) {
 	buffer->getSize(buffer_width, buffer_height);
 	optix_context->launch(0, static_cast<unsigned int>(buffer_width),
 			static_cast<unsigned int>(buffer_height));
-
-
-}
-
-void PathTracer::trace() {
-    float3 eye, U, V, W;
-    scene->getCam()->getEyeUVW( eye, U, V, W );
-    SampleScene::RayGenCameraData camera_data( eye, U, V, W );
-    trace( camera_data );
 }
 
 //-----------------------------------------------------------------------------

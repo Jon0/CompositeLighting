@@ -50,7 +50,6 @@ struct PerRayData_pathtrace_shadow {
 rtDeclareVariable(float,         scene_epsilon, , );
 rtDeclareVariable(rtObject,      top_object, , );
 rtDeclareVariable(rtObject,      local_object, , );
-rtDeclareVariable(rtObject,      empty_object, , );
 
 // For camera
 rtDeclareVariable(float3,        eye, , );
@@ -376,6 +375,7 @@ RT_PROGRAM void miss() {
 	float v = 0.5f * (1.0f + sin(phi));
 	float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
 	//emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
+
 	current_prd.radiance = emap;
 	current_prd.done = true;
 }

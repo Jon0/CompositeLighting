@@ -1,4 +1,5 @@
 #include "display/GLFWDisplay.h"
+#include "scene/SceneParser.h"
 #include "PathTracer.h"
 
 using namespace std;
@@ -17,17 +18,21 @@ int main(int argc, char** argv) {
 		cout << "argument must specify config file" << endl;
 		exit(1);
 	}
+	srand(time(NULL));
 
 	// Construct the scene
 	// This specifies scene geometry, light map and camera angle
-	shared_ptr<Scene> scene = make_shared<Scene>();
-	scene->loadConfig(argv[1]);
+
+	SceneParser sp(argv[1]);
+	shared_ptr<Scene> scene = sp.readScene();
 
 	// uses scene to produce rendering
+
 	PathTracer pt;
 	pt.setScene(scene, true);
 
-	// pass output buffer to display
+	// pass output buffer to the display
+
 	d.setBuffer( pt.getOutputBuffer() );
 	d.run( pt );
 

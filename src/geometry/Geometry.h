@@ -20,7 +20,7 @@ public:
 
 	virtual optix::Transform get() = 0;
 
-	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, optix::Material) = 0;
+	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, optix::Material) = 0;
 };
 
 } /* namespace std */

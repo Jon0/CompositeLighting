@@ -30,7 +30,7 @@ public:
 
 	virtual optix::Transform get();
 
-	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, optix::Material);
+	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, optix::Material);
 
 	void setPosition(optix::Transform &, optix::float3);
 

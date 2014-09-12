@@ -13,6 +13,10 @@
 
 namespace std {
 
+int GLFWDisplay::mb1, GLFWDisplay::mb2;
+double GLFWDisplay::mx, GLFWDisplay::my;
+Scene *GLFWDisplay::sn;
+Camera *GLFWDisplay::cam;
 PathTracer *GLFWDisplay::ptr;
 
 string getTime() {
@@ -49,6 +53,8 @@ void GLFWDisplay::setBuffer(optix::Buffer b) {
 
 void GLFWDisplay::run(PathTracer &pt) {
 	ptr = &pt;
+	sn = &ptr->getScene();
+	cam = sn->getCam();
 	if (!shared_buffer) {
 		cout << "need to set buffer before running" << endl;
 		return;
@@ -62,6 +68,8 @@ void GLFWDisplay::run(PathTracer &pt) {
     glfwSetWindowTitle(window, "path_tracer");
     glfwSetWindowSize(window, width, height);
     glfwSetKeyCallback(window, keyFunc);
+    glfwSetMouseButtonCallback(window, mouseFunc);
+    glfwSetCursorPosCallback(window, posFunc);
 
 	GLrenderer renderer( shared_buffer->getGLBOId(), width, height );
 	glViewport(0, 0, width, height);
@@ -97,6 +105,9 @@ void GLFWDisplay::keyFunc(GLFWwindow *w, int key, int scan, int act, int) {
 		sutilDisplayFilePPM( fname.c_str(), ptr->getOutputBuffer()->get() );
 		cout << "saved as " << fname << endl;
 	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_R) {
+		cam->reset();
+	}
 	else if (act == GLFW_PRESS && key == GLFW_KEY_UP) {
 		Scene &s = ptr->getScene();
 		s.modify(1.0f);
@@ -108,6 +119,35 @@ void GLFWDisplay::keyFunc(GLFWwindow *w, int key, int scan, int act, int) {
 	else if (act == GLFW_PRESS) {
 		ptr->keyPressed(key);
 	}
+}
+
+void GLFWDisplay::mouseFunc(GLFWwindow *w, int button, int act, int) {
+	if (act == GLFW_PRESS && button == 0) {
+		cout << "button " << button << endl;
+		mb1 = 1;
+	}
+	else {
+		mb1 = 0;
+	}
+	if (act == GLFW_PRESS && button == 1) {
+		cout << "button " << button << endl;
+		mb2 = 1;
+	}
+	else {
+		mb2 = 0;
+	}
+}
+
+void GLFWDisplay::posFunc(GLFWwindow *w, double x, double y) {
+	// drag actions
+	if (mb1) {
+		cam->mouseDragRotation(mx, my, x, y);
+	}
+	if (mb2) {
+		cam->mouseDragPanning(x - mx, y - my);
+	}
+	mx = x;
+	my = y;
 }
 
 } /* namespace std */

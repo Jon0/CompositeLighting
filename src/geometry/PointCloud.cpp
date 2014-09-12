@@ -7,11 +7,20 @@
 
 #include <iostream>
 
-#include "../PathTracer.h"
+#include <pcl/features/integral_image_normal.h>
 
+#include "../PathTracer.h"
 #include "PointCloud.h"
 
 namespace std {
+
+optix::float3 tofloat3(pcl::PointXYZ &p) {
+	return optix::make_float3(p.x, p.y, p.z);
+}
+
+optix::float3 tofloat3(pcl::Normal &n) {
+	return optix::make_float3(n.normal_x, n.normal_y, n.normal_z);
+}
 
 bool PointCloud::initialised;
 optix::Program PointCloud::bounding_box;
@@ -24,31 +33,18 @@ void PointCloud::initialise(optix::Context c) {
 	initialised = true;
 }
 
-PointCloud::PointCloud() {
+PointCloud::PointCloud(): cloud(new pcl::PointCloud<pcl::PointXYZ>),
+		normals(new pcl::PointCloud<pcl::Normal>) {
 	initial_pos = optix::make_float3(0.0f, 0.0f, 0.0f);
-
-	// generate a sphere
-	unsigned int num_vertices = 500000;
-	for (int i = 0; i < num_vertices; ++i) {
-		float a = -1.0f + static_cast<float>(rand())
-						/ (static_cast<float>(RAND_MAX / 2.0f));
-		float b = -1.0f+ static_cast<float>(rand())
-						/ (static_cast<float>(RAND_MAX / 2.0f));
-		float c = -1.0f+ static_cast<float>(rand())
-						/ (static_cast<float>(RAND_MAX / 2.0f));
-		float l = sqrtf(a * a + b * b + c * c);
-		a /= l;
-		b /= l;
-		c /= l;
-
-		verts.push_back(initial_pos + 5.0f * optix::make_float3(a, b, c));
-		normals.push_back(optix::make_float3(a, b, c));
-	}
 }
 
-PointCloud::PointCloud(vector<optix::float3> v, vector<optix::float3> n) {
-	verts = v;
-	normals = n;
+PointCloud::PointCloud(vector<optix::float3> v, vector<optix::float3> n): PointCloud() {
+	for (optix::float3 &p: v) {
+		cloud->push_back(pcl::PointXYZ(p.x, p.y, p.z));
+	}
+	for (optix::float3 &p: n) {
+		normals->push_back(pcl::Normal(p.x, p.y, p.z));
+	}
 }
 
 PointCloud::~PointCloud() {}
@@ -61,11 +57,12 @@ optix::Transform PointCloud::get() {
 	return tr;
 }
 
-optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, const std::string &, optix::Material material) {
+optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, optix::Material material) {
 	if (!initialised) {
 		throw runtime_error("point cloud programs not initialised");
 	}
-	unsigned int num_vertices = verts.size();
+	unsigned int num_vertices = cloud->size();
+	cout << "point cloud with " << num_vertices << " points" << endl;
 
 	// Create vertex buffer
 	optix::Buffer m_vbuffer = c->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, num_vertices);
@@ -77,8 +74,8 @@ optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, const std::s
 
 	// copy buffer
 	for (int i = 0; i < num_vertices; ++i) {
-		vbuffer_data[i] = verts[i];
-		nbuffer_data[i] = normals[i];
+		vbuffer_data[i] = tofloat3(cloud->points[i]);
+		nbuffer_data[i] = tofloat3(normals->points[i]);
 	}
 	m_vbuffer->unmap();
 	m_nbuffer->unmap();
@@ -93,7 +90,7 @@ optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, const std::s
 
 	optix::GeometryInstance instance = c->createGeometryInstance( pc, &material, &material+1 );
 	instance->addMaterial(material);
-	instance["diffuse_color"]->setFloat(optix::make_float3(0.85f, 0.85f, 0.85f));
+	instance["diffuse_color"]->setFloat(optix::make_float3(0.95f, 0.95f, 0.95f));
 
 	optix::GeometryGroup model_group = c->createGeometryGroup();
 	model_group->setChildCount( 1 );
@@ -106,6 +103,45 @@ optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, const std::s
 	tr = c->createTransform();
 	tr->setChild(model_group);
 	return instance;
+}
+
+void PointCloud::makeSphere(float radius) {
+	// generate a sphere
+	unsigned int num_vertices = 10000 * radius * radius;
+	for (int i = 0; i < num_vertices; ++i) {
+		float a = -1.0f + static_cast<float>(rand())
+						/ (static_cast<float>(RAND_MAX / 2.0f));
+		float b = -1.0f+ static_cast<float>(rand())
+						/ (static_cast<float>(RAND_MAX / 2.0f));
+		float c = -1.0f+ static_cast<float>(rand())
+						/ (static_cast<float>(RAND_MAX / 2.0f));
+		float l = sqrtf(a * a + b * b + c * c);
+		a /= l;
+		b /= l;
+		c /= l;
+
+		optix::float3 ppos = initial_pos + radius * optix::make_float3(a, b, c);
+
+		cloud->push_back(pcl::PointXYZ(ppos.x, ppos.y, ppos.z));
+		normals->push_back(pcl::Normal(a, b, c));
+	}
+}
+
+void PointCloud::load(string fname) {
+	if (pcl::io::loadPCDFile < pcl::PointXYZ > (fname, *cloud) == -1) {
+		PCL_ERROR(("Couldn't read file "+fname+"\n").c_str());
+		return;
+	}
+	cout << "Loaded " << cloud->width * cloud->height
+			<< " data points from test_pcd.pcd with the following fields: "
+			<< endl;
+
+	pcl::IntegralImageNormalEstimation < pcl::PointXYZ, pcl::Normal > ne;
+	ne.setNormalEstimationMethod(ne.AVERAGE_3D_GRADIENT);
+	ne.setMaxDepthChangeFactor(0.02f);
+	ne.setNormalSmoothingSize(10.0f);
+	ne.setInputCloud(cloud);
+	ne.compute(*normals);
 }
 
 } /* namespace std */

@@ -30,8 +30,8 @@ if(GLUT_FOUND AND OPENGL_FOUND)
     "exr/*.cpp"
     "geometry/*.cpp"
     "geometry/*.cu"
+    "image/*.cpp"
     "scene/*.cpp"
-    "texture/*.cpp"
   )
 
   # Create optix executable

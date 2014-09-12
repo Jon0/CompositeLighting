@@ -8,11 +8,17 @@
 #ifndef POINTCLOUD_H_
 #define POINTCLOUD_H_
 
-#include "../texture/PPMTexture.h"
+#include <pcl/io/io.h>
+#include <pcl/io/pcd_io.h>
+
 #include "Geometry.h"
 
 namespace std {
 
+optix::float3 tofloat3(pcl::PointXYZ &);
+optix::float3 tofloat3(pcl::Normal &);
+
+// TODO wrapper for pcl point cloud class
 class PointCloud: public Geometry {
 public:
 	PointCloud();
@@ -23,7 +29,11 @@ public:
 
 	virtual optix::Transform get();
 
-	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, const std::string &, optix::Material);
+	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, optix::Material);
+
+	void makeSphere(float);
+
+	void load(string);
 
 	static void initialise(optix::Context);
 
@@ -31,7 +41,9 @@ private:
 	optix::float3 initial_pos;
 	optix::Transform tr;
 
-	vector<optix::float3> verts, normals;
+	//vector<optix::float3> verts, normals;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+	pcl::PointCloud<pcl::Normal>::Ptr normals;
 
 	static bool initialised;
 	static optix::Program bounding_box;

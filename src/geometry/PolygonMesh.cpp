@@ -56,13 +56,13 @@ void PolygonMesh::setPosition(optix::Transform &t, optix::float3 p) {
 	t->setMatrix( false, id.getData(), 0 );
 }
 
-optix::GeometryInstance PolygonMesh::makeGeometry( optix::Context &m_context, const std::string& path, optix::Material material ) {
+optix::GeometryInstance PolygonMesh::makeGeometry( optix::Context &m_context, optix::Material material ) {
 	if (!initialised) {
 		throw runtime_error("mesh programs not initialised");
 	}
 
 	optix::GeometryGroup model_group = m_context->createGeometryGroup();
-	ObjLoader objloader0((path+model.filepath).c_str(), m_context, model_group, material);
+	ObjLoader objloader0(model.filepath.c_str(), m_context, model_group, material);
 	objloader0.setBboxProgram(bounding_box);
 	objloader0.setIntersectProgram(intersection);
 	objloader0.load(model.transform);

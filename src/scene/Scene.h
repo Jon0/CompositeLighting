@@ -13,66 +13,71 @@
 #include <string>
 #include <vector>
 
+#include <opencv2/core/core.hpp>
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
 
-#include <Mouse.h>
-
 #include "../geometry/Geometry.h"
-#include "../texture/PPMTexture.h"
+#include "Camera.h"
 
 namespace std {
 
 typedef vector<shared_ptr<Geometry>> geom_list;
 
 /**
- * Contains scene setup information read from config file
- * config commands:
- * directory = <directory to look in>
- * photo = <photo filename>
- * lightmap = <lightmap filename>
+ * Scene contains geometry, lighting and a camera
  */
 class Scene {
 public:
 	Scene();
 	virtual ~Scene();
 
+	inline Camera *getCam() {
+		return &camera;
+	}
 
+	inline cv::Mat &getPhoto() {
+		return photo_color;
+	}
 
-	string photoPath();
-	string lightMapPath();
-	Texture &getPhoto();
-	PinholeCamera *getCam();
+	inline bool isModified() {
+		return modified || camera.isModified();
+	}
 
-	void loadConfig(string);
+	inline void setModified(bool m) {
+		modified = m;
+	}
+
+	void setPhoto(cv::Mat &);
+	void setDepthPhoto(cv::Mat &);
+	void setLightMap(cv::Mat &);
+
 	void init(optix::Context &);
-
-	void setMaterialPrograms( optix::Program, optix::Program );
-
 	void modify(float k);
 
+	// to be removed
+	void setMaterialPrograms( optix::Program, optix::Program );
+
 private:
-	map<string, string> options;
 	optix::Context context;
+
+	Camera camera;
 	geom_list models, local_models;
+	optix::Group maingroup, localgroup;
 
-	optix::Group maingroup;
-	optix::Group localgroup;
-	optix::Group emptygroup;
+	cv::Mat photo_color, lightmap;
+	bool initialised, modified;
 
+
+
+	// move to material class
 	optix::Program diffuse_ch;
 	optix::Program diffuse_ah;
 
-	PinholeCamera *camera;
-	PPMTexture photo_color, photo_depth;
-
-	bool config_loaded;
-
-	void addOption(string);
-
 	void addModel(geom_list &, string fname, float scale, optix::float3 pos, optix::float3 c);
-	void virtualGeometry( const std::string& path );
+
+	void initGeometry();
 
 	optix::Material createMaterials(string);
 

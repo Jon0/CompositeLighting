@@ -26,9 +26,13 @@ RT_PROGRAM void cloud_intersect(int primIdx) {
 	float3 tan = normalize( cross(nrm, make_float3(0.0f, 0.0f, 1.0f) ) );
 	float3 bitan = normalize( cross(nrm, tan ) );
 
-	float3 p0 = p + 0.05 * tan;
-	float3 p1 = p - 0.015 * tan + 0.045 * bitan;
-	float3 p2 = p - 0.015 * tan - 0.045 * bitan;
+//	float3 p0 = p + 0.05 * tan;
+//	float3 p1 = p - 0.015 * tan + 0.045 * bitan;
+//	float3 p2 = p - 0.015 * tan - 0.045 * bitan;
+
+	float3 p0 = p + 0.2 * tan;
+	float3 p1 = p - 0.06 * tan + 0.18 * bitan;
+	float3 p2 = p - 0.06 * tan - 0.18 * bitan;
 
 	// Intersect ray with triangle
 	float3 n;
