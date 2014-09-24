@@ -54,7 +54,7 @@ public:
 	void setLightMap(cv::Mat &);
 
 	void init(optix::Context &);
-	void modify(float k);
+	void modify(float, float, float);
 
 	// to be removed
 	void setMaterialPrograms( optix::Program, optix::Program );

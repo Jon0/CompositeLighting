@@ -55,8 +55,8 @@ ImageCoverter::ImageCoverter() {}
 ImageCoverter::~ImageCoverter() {}
 
 PointCloud ImageCoverter::makePointCloud(cv::Mat &t, Camera *cam) {
-	float scene_min_depth = 15.0f;
-	float scene_max_depth = 45.0f;
+	float scene_min_depth = 5.0f;
+	float scene_max_depth = 35.0f;
 	float scene_depth_range = scene_max_depth - scene_min_depth;
 	int w = t.cols;
 	int h = t.rows;
@@ -78,13 +78,13 @@ PointCloud ImageCoverter::makePointCloud(cv::Mat &t, Camera *cam) {
 			optix::float3 ray_origin = eye;
 			optix::float3 ray_direction = normalize(pixel.x * U + pixel.y * V + W);
 
-			if (depth < 0.7f && randomB(depth * 3.0f)) {
+			if (depth < 0.7f && randomB(depth * 2.0f)) {
 				optix::float3 point_pos = ray_origin + (scene_min_depth + depth * scene_depth_range) * ray_direction;
 				float l = optix::length(geom_center - point_pos);
 
 				if (l < 6.0f) {
 					v.push_back(point_pos);
-					n.push_back(optix::normalize(geom_center - point_pos));
+					n.push_back(-optix::normalize(geom_center - point_pos));
 				}
 			}
 		}

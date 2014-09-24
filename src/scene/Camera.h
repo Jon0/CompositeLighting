@@ -44,6 +44,7 @@ public:
 	void resize(int, int);
 
 	void printAngle();
+	void zoom(float);
 	void mouseDragRotation(int, int, int, int);
 	void mouseDragPanning(int, int);
 
@@ -67,7 +68,7 @@ private:
 	/*
 	 * point the camera looks at
 	 */
-	glm::vec3 focus, eye, U, V, W;
+	glm::vec3 default_focus, focus, eye, U, V, W;
 
 	glm::quat cam_angle, cam_angle_d, click_old, click_new;
 	int windowwidth, windowheight;

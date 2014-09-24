@@ -44,10 +44,22 @@ void PathTracer::keyPressed(unsigned char key) {
 		optix_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
 	}
 	else if (key == 'Q') {
-		scene->modify(1.0f);
+		scene->modify(1.0f, 0.0f, 0.0f);
 	}
 	else if (key == 'W') {
-		scene->modify(-1.0f);
+		scene->modify(-1.0f, 0.0f, 0.0f);
+	}
+	else if (key == 'A') {
+		scene->modify(0.0f, 1.0f, 0.0f);
+	}
+	else if (key == 'S') {
+		scene->modify(0.0f, -1.0f, 0.0f);
+	}
+	else if (key == 'Z') {
+		scene->modify(0.0f, 0.0f, 1.0f);
+	}
+	else if (key == 'X') {
+		scene->modify(0.0f, 0.0f, -1.0f);
 	}
 	else if (isdigit(key)) {
 		unsigned int newmode = key - '0';

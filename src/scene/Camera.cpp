@@ -16,7 +16,7 @@
 namespace std {
 
 Camera::Camera():
-		focus {0, 0, 0},
+		default_focus { 1.5f, -2.0f, 12.0f },
 		eye {0, 0, 0},
 		U {0, 0, 0},
 		V {0, 0, 0},
@@ -26,6 +26,7 @@ Camera::Camera():
 		click_old {1, 0, 0, 0},
 		click_new {1, 0, 0, 0}
 {
+	focus = default_focus;
 	cam_aspect = 1.0;
 	viewzoom = 12.0;
 
@@ -40,7 +41,7 @@ Camera::Camera():
 Camera::~Camera() {}
 
 void Camera::reset() {
-	focus = glm::vec3(0, 0, 0);
+	focus = default_focus;
 	cam_angle = glm::quat(1, 0, 0, 0),
 	viewzoom = 12.0;
 	modified = true;
@@ -78,6 +79,11 @@ void Camera::resize(int x, int y) {
 void Camera::printAngle() {
 	cout << "camera quat = " << cam_angle.w << ", " << cam_angle.x << ", " <<  cam_angle.y << ", " <<  cam_angle.z << endl;
 	cout << "camera zoom = " << viewzoom << endl;
+}
+
+void Camera::zoom(float f) {
+	viewzoom *= f;
+	modified = true;
 }
 
 void Camera::mouseDragRotation(int x1, int y1, int x2, int y2) {

@@ -80,9 +80,9 @@ void Scene::setMaterialPrograms(optix::Program ch, optix::Program ah) {
 	diffuse_ah = ah;
 }
 
-void Scene::modify(float k) {
+void Scene::modify(float x, float y, float z) {
 	for (int i = 0; i < models.size(); ++i) {
-		models[i]->move(0.0f, k, 0.0f);
+		models[i]->move(x, y, z);
 	}
 	maingroup->getAcceleration()->markDirty();
 	modified = true;

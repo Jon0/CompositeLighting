@@ -49,19 +49,24 @@ PointCloud::PointCloud(vector<optix::float3> v, vector<optix::float3> n): PointC
 
 PointCloud::~PointCloud() {}
 
-void PointCloud::move(float, float, float) {
+void PointCloud::bufferSubset(optix::Context &c, optix::Geometry &, pcl::PointXYZ focus, float radius) {
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSubset(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::PointCloud<pcl::Normal>::Ptr normalSubset(new pcl::PointCloud<pcl::Normal>);
 
-}
+	unsigned int cSize = cloud->size();
+	for (int i = 0; i < cSize; ++i) {
 
-optix::Transform PointCloud::get() {
-	return tr;
-}
+		// check within radius, and normal faces towards given point
+		pcl::PointXYZ &tp = cloud->points[i];
+		pcl::Normal &tn = normals->points[i];
+		//float d = (tp - focus).length();
 
-optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, optix::Material material) {
-	if (!initialised) {
-		throw runtime_error("point cloud programs not initialised");
+		cloudSubset->push_back(tp);
+		normalSubset->push_back(tn);
 	}
-	unsigned int num_vertices = cloud->size();
+
+	// print size
+	unsigned int num_vertices = cloudSubset->size();
 	cout << "point cloud with " << num_vertices << " points" << endl;
 
 	// Create vertex buffer
@@ -74,19 +79,38 @@ optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, optix::Mater
 
 	// copy buffer
 	for (int i = 0; i < num_vertices; ++i) {
-		vbuffer_data[i] = tofloat3(cloud->points[i]);
-		nbuffer_data[i] = tofloat3(normals->points[i]);
+		vbuffer_data[i] = tofloat3(cloudSubset->points[i]);
+		nbuffer_data[i] = tofloat3(normalSubset->points[i]);
 	}
 	m_vbuffer->unmap();
 	m_nbuffer->unmap();
 
-	// make geometry group containing this instance
-	optix::Geometry pc = c->createGeometry();
+	// set geometry
 	pc->setPrimitiveCount( num_vertices );
-	pc->setIntersectionProgram( intersection);
-	pc->setBoundingBoxProgram( bounding_box );
 	pc[ "vertex_buffer" ]->setBuffer( m_vbuffer );
 	pc[ "normal_buffer" ]->setBuffer( m_nbuffer );
+
+}
+
+void PointCloud::move(float, float, float) {
+
+}
+
+optix::Transform PointCloud::get() {
+	return tr;
+}
+
+optix::GeometryInstance PointCloud::makeGeometry(optix::Context &c, optix::Material material) {
+	if (!initialised) {
+		throw runtime_error("point cloud programs not initialised");
+	}
+
+	// make geometry group containing this instance
+	pc = c->createGeometry();
+	pc->setIntersectionProgram( intersection);
+	pc->setBoundingBoxProgram( bounding_box );
+	bufferSubset(c, pc, pcl::PointXYZ(0,0,0), 5.0f);
+
 
 	optix::GeometryInstance instance = c->createGeometryInstance( pc, &material, &material+1 );
 	instance->addMaterial(material);

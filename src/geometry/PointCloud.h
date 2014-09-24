@@ -40,10 +40,14 @@ public:
 private:
 	optix::float3 initial_pos;
 	optix::Transform tr;
+	optix::Geometry pc;
 
-	//vector<optix::float3> verts, normals;
+	// optix types maybe better for doing math with
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
 	pcl::PointCloud<pcl::Normal>::Ptr normals;
+
+	// make optix buffer of nearby points
+	void bufferSubset(optix::Context &, optix::Geometry &, pcl::PointXYZ, float);
 
 	static bool initialised;
 	static optix::Program bounding_box;

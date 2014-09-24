@@ -70,6 +70,7 @@ void GLFWDisplay::run(PathTracer &pt) {
     glfwSetKeyCallback(window, keyFunc);
     glfwSetMouseButtonCallback(window, mouseFunc);
     glfwSetCursorPosCallback(window, posFunc);
+    glfwSetScrollCallback(window, scrollFunc);
 
 	GLrenderer renderer( shared_buffer->getGLBOId(), width, height );
 	glViewport(0, 0, width, height);
@@ -109,12 +110,10 @@ void GLFWDisplay::keyFunc(GLFWwindow *w, int key, int scan, int act, int) {
 		cam->reset();
 	}
 	else if (act == GLFW_PRESS && key == GLFW_KEY_UP) {
-		Scene &s = ptr->getScene();
-		s.modify(1.0f);
+		sn->modify(0.0f, 1.0f, 0.0f);
 	}
 	else if (act == GLFW_PRESS && key == GLFW_KEY_DOWN) {
-		Scene &s = ptr->getScene();
-		s.modify(-1.0f);
+		sn->modify(0.0f, -1.0f, 0.0f);
 	}
 	else if (act == GLFW_PRESS) {
 		ptr->keyPressed(key);
@@ -148,6 +147,15 @@ void GLFWDisplay::posFunc(GLFWwindow *w, double x, double y) {
 	}
 	mx = x;
 	my = y;
+}
+
+void GLFWDisplay::scrollFunc(GLFWwindow *, double x, double y) {
+	if (y > 0) {
+		cam->zoom(1.05f);
+	}
+	else {
+		cam->zoom(0.95f);
+	}
 }
 
 } /* namespace std */

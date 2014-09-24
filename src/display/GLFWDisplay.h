@@ -42,6 +42,7 @@ private:
 	static void keyFunc(GLFWwindow *, int, int, int, int);
 	static void mouseFunc(GLFWwindow *, int, int, int);
 	static void posFunc(GLFWwindow *, double, double);
+	static void scrollFunc(GLFWwindow *, double, double);
 
 };
 
