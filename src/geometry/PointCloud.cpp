@@ -92,7 +92,15 @@ void PointCloud::bufferSubset(optix::Context &c, optix::Geometry &, pcl::PointXY
 
 }
 
-void PointCloud::move(float, float, float) {
+void PointCloud::zoom(float) {
+
+}
+
+void PointCloud::move(glm::vec3 v) {
+
+}
+
+void PointCloud::rotate(glm::quat) {
 
 }
 

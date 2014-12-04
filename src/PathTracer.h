@@ -32,7 +32,7 @@ class PathTracer {
 public:
 	// Set the actual render parameters below in main().
 	PathTracer() :
-			m_rr_begin_depth(1u), m_max_depth(100u), m_sqrt_num_samples(1u),
+			m_rr_begin_depth(1u), m_max_depth(1u), m_sqrt_num_samples(1u),
 			m_width(512u), m_height(512u), m_use_vbo_buffer( true ),
 			m_num_devices( 0 ), m_cpu_rendering_enabled( false ) {
 		optix_context = optix::Context::create();
@@ -60,6 +60,7 @@ public:
 
 private:
 	void resetScene();
+	void updateCamera();
 
 	optix::Context optix_context;
 	optix::Program diffuse_ch_out;

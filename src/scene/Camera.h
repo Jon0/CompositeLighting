@@ -12,10 +12,11 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
+
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
+
+#include "Modifiable.h"
 
 namespace std {
 
@@ -34,21 +35,10 @@ inline float RtoD(float r) {
 void getArc(int, int, int, int, float, glm::quat &);
 void getUnitCircle(int, int, int, int, glm::quat &);
 
-class Camera {
+class Camera: public Modifiable {
 public:
 	Camera();
 	virtual ~Camera();
-
-	void reset();
-	void update( float );
-	void resize(int, int);
-
-	void printAngle();
-	void zoom(float);
-	void mouseDragRotation(int, int, int, int);
-	void mouseDragPanning(int, int);
-
-	glm::quat cameraAngle();
 
 	inline bool isModified() {
 		return modified;
@@ -62,6 +52,27 @@ public:
 		w = tof3(W);
 	}
 
+	void alignAngle();
+	void setPos(glm::vec3);
+	void setAngle(glm::quat);
+	void setZoom(float);
+	void setFov(float);
+	void reset();
+	void update( float );
+	void resize(int, int);
+
+	void printAngle();
+	void mouseDragRotation(int, int, int, int);
+	void mouseDragPanning(int, int);
+
+	glm::quat cameraAngle();
+	float cameraExposure();
+	void modifyExposure(float);
+
+	virtual void zoom(float);
+	virtual void move(glm::vec3);
+	virtual void rotate(glm::quat);
+
 private:
 	bool modified;
 
@@ -72,7 +83,7 @@ private:
 
 	glm::quat cam_angle, cam_angle_d, click_old, click_new;
 	int windowwidth, windowheight;
-	float viewzoom, cam_aspect, arcball_radius, arcball_x, arcball_y, hfov, vfov;
+	float viewzoom, cam_aspect, arcball_radius, arcball_x, arcball_y, hfov, vfov, exposure;
 };
 
 } /* namespace std */

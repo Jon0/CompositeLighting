@@ -7,10 +7,11 @@
 
 #include <stdexcept>
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <ObjLoader.h>
 
 #include "../PathTracer.h"
-
 #include "PolygonMesh.h"
 
 namespace std {
@@ -26,7 +27,8 @@ void PolygonMesh::initialise(optix::Context c) {
 	initialised = true;
 }
 
-PolygonMesh::PolygonMesh(Model &m) {
+PolygonMesh::PolygonMesh(Model &m):
+		model_rot(1, 0, 0, 0) {
 	model = m;
 }
 
@@ -38,19 +40,29 @@ optix::Transform PolygonMesh::get() {
 	return model.tr;
 }
 
-void PolygonMesh::move(float x, float y, float z) {
-	model.position.x += x;
-	model.position.y += y;
-	model.position.z += z;
-	setPosition(model.tr, model.position);
+void PolygonMesh::zoom(float) {
+
 }
 
-void PolygonMesh::setPosition(optix::Transform &t, optix::float3 p) {
+void PolygonMesh::move(glm::vec3 v) {
+	model.position.x += v.x;
+	model.position.y += v.y;
+	model.position.z += v.z;
+	setPosition(model.tr, model.position, model_rot);
+}
+
+void PolygonMesh::rotate(glm::quat q) {
+	model_rot = q * model_rot;
+	setPosition(model.tr, model.position, model_rot);
+}
+
+void PolygonMesh::setPosition(optix::Transform &t, optix::float3 p, glm::quat q) {
+	glm::mat4 m4 = glm::mat4_cast(q);
 	float mod[4*4] = {
-			1,  0,  0,	p.x,
-            0,  1,  0,  p.y,
-            0,  0,  1,  p.z,
-            0,  0,  0,  1.0
+			m4[0][0],  m4[0][1],  m4[0][2],	m4[0][3] + p.x,
+			m4[1][0],  m4[1][1],  m4[1][2],	m4[1][3] + p.y,
+			m4[2][0],  m4[2][1],  m4[2][2],	m4[2][3] + p.z,
+			m4[3][0],  m4[3][1],  m4[3][2],	m4[3][3],
 	};
 	const optix::Matrix4x4 id(mod);
 	t->setMatrix( false, id.getData(), 0 );
@@ -70,7 +82,7 @@ optix::GeometryInstance PolygonMesh::makeGeometry( optix::Context &m_context, op
 
 	model.tr = m_context->createTransform();
 	model.tr->setChild(model_group);
-	setPosition(model.tr, model.position);
+	setPosition(model.tr, model.position, model_rot);
 
 
 	optix::GeometryInstance gi = model_group->getChild(0);

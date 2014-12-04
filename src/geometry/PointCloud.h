@@ -25,7 +25,9 @@ public:
 	PointCloud(vector<optix::float3>, vector<optix::float3>);
 	virtual ~PointCloud();
 
-	virtual void move(float, float, float);
+	virtual void zoom(float);
+	virtual void move(glm::vec3);
+	virtual void rotate(glm::quat);
 
 	virtual optix::Transform get();
 

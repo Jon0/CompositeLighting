@@ -52,24 +52,34 @@ public:
 	void setPhoto(cv::Mat &);
 	void setDepthPhoto(cv::Mat &);
 	void setLightMap(cv::Mat &);
+	void setCamPos(glm::vec3);
+	void setCamAngle(glm::quat);
+	void setCamZoom(float);
+	void setCamFov(float);
+	void addGeometry(string, bool);
 
 	void init(optix::Context &);
-	void modify(float, float, float);
+
+	// make changes to scene
+	void select();
+	void zoom(float);
+	void move(glm::vec3);
+	void rotate(glm::quat);
 
 	// to be removed
 	void setMaterialPrograms( optix::Program, optix::Program );
 
 private:
 	optix::Context context;
+	optix::Group maingroup, localgroup;
+	cv::Mat photo_color, lightmap;
 
 	Camera camera;
+	vector<Modifiable *> mod_objs;
 	geom_list models, local_models;
-	optix::Group maingroup, localgroup;
 
-	cv::Mat photo_color, lightmap;
 	bool initialised, modified;
-
-
+	uint select_index;
 
 	// move to material class
 	optix::Program diffuse_ch;

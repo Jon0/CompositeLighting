@@ -56,6 +56,8 @@ rtDeclareVariable(float3,        eye, , );
 rtDeclareVariable(float3,        U, , );
 rtDeclareVariable(float3,        V, , );
 rtDeclareVariable(float3,        W, , );
+rtDeclareVariable(float,        exposure, , );
+
 rtDeclareVariable(float3,        bad_color, , );
 rtDeclareVariable(unsigned int,  frame_number, , );
 rtDeclareVariable(unsigned int,  sqrt_num_samples, , );
@@ -110,66 +112,72 @@ static __device__ inline float toSRGB(float a) {
 }
 
 static __device__ float3 getRay(rtObject geometry, int outline) {
-	  size_t2 screen = output_buffer.size();
+	size_t2 screen = output_buffer.size();
 
-	  float2 inv_screen = 1.0f/make_float2(screen) * 2.f;
-	  float2 pixel = (make_float2(launch_index)) * inv_screen - 1.f;
+	float2 inv_screen = 1.0f / make_float2(screen) * 2.f;
+	float2 pixel = (make_float2(launch_index)) * inv_screen - 1.f;
 
-	  float2 jitter_scale = inv_screen / sqrt_num_samples;
-	  unsigned int samples_per_pixel = sqrt_num_samples*sqrt_num_samples;
-	  float3 result = make_float3(0.0f);
+	float2 jitter_scale = inv_screen / sqrt_num_samples;
+	unsigned int samples_per_pixel = sqrt_num_samples * sqrt_num_samples;
+	float3 result = make_float3(0.0f);
 
-	  unsigned int seed = tea<16>(screen.x*launch_index.y+launch_index.x, frame_number);
-	  do {
-	    unsigned int x = samples_per_pixel%sqrt_num_samples;
-	    unsigned int y = samples_per_pixel/sqrt_num_samples;
-	    float2 jitter = make_float2(x-rnd(seed), y-rnd(seed));
-	    float2 d = pixel + jitter*jitter_scale;
-	    float3 ray_origin = eye;
-	    float3 ray_direction = normalize(d.x*U + d.y*V + W);
+	unsigned int seed = tea<16>(screen.x * launch_index.y + launch_index.x, frame_number);
+	do {
+		unsigned int x = 1; //samples_per_pixel % sqrt_num_samples;
+		unsigned int y = 1; //samples_per_pixel / sqrt_num_samples;
+		float2 jitter = make_float2(x - rnd(seed), y - rnd(seed));
+		float2 d = pixel + jitter * jitter_scale;
+		float3 ray_origin = eye;
+		float3 ray_direction = normalize(d.x * U + d.y * V + W);
 
-	    PerRayData_pathtrace prd;
-	    prd.result = make_float3(0.f);
-	    prd.attenuation = make_float3(1.f);
-	    prd.countEmitted = true;
-	    prd.done = false;
-	    prd.inside = false;
-	    prd.seed = seed;
-	    prd.depth = 0;
-	    prd.outline = outline;
+		PerRayData_pathtrace prd;
+		prd.result = make_float3(0.f);
+		prd.radiance = make_float3(0.f);
+		prd.attenuation = make_float3(1.f);
+		prd.countEmitted = true;
+		prd.done = false;
+		prd.inside = false;
+		prd.seed = seed;
+		prd.depth = 0;
+		prd.outline = outline;
 
-	    for(;;) {
-	    	// eye ray
-	      Ray ray = make_Ray(ray_origin, ray_direction, pathtrace_ray_type, scene_epsilon, RT_DEFAULT_MAX);
-	      rtTrace(geometry, ray, prd);
-	      prd.result += prd.radiance * prd.attenuation;
+		for (;;) {
+			// eye ray
+			Ray ray = make_Ray(ray_origin, ray_direction, pathtrace_ray_type,
+					scene_epsilon, RT_DEFAULT_MAX);
+			rtTrace(geometry, ray, prd);
+			prd.result += prd.radiance * prd.attenuation;
 
-	      if(prd.done) {
-	        break;
-	      }
+			if (prd.done) {
+				break;
+			}
 
-	      // RR
-	      prd.depth++;
-	      if(prd.depth >= 0){
-	        float pcont = fmaxf(prd.attenuation);
-	        if(rnd(prd.seed) >= pcont)
-	          break;
-	        prd.attenuation *= pcont;
-	      }
+			// RR
+			prd.depth++;
+			if (prd.depth >= 10) {
+				break;
+			}
+			else if (prd.depth >= 0) {
+				float pcont = fmaxf(prd.attenuation);
+				if (rnd(prd.seed) >= pcont)
+					break;
+				prd.attenuation *= pcont;
+			}
 
-	      ray_origin = prd.origin;
-	      ray_direction = prd.direction;
-	    }
 
-	    result += prd.result;
-	    seed = prd.seed;
-	  } while (--samples_per_pixel);
+			ray_origin = prd.origin;
+			ray_direction = prd.direction;
+		}
 
-		float3 pixel_color = result/(sqrt_num_samples*sqrt_num_samples);
-		pixel_color.x = toSRGB(pixel_color.x);
-		pixel_color.y = toSRGB(pixel_color.y);
-		pixel_color.z = toSRGB(pixel_color.z);
+		result += prd.result;
+		seed = prd.seed;
+	} while (--samples_per_pixel);
 
+	if (!outline) result *= exposure;
+	float3 pixel_color = result; //(sqrt_num_samples * sqrt_num_samples);
+	pixel_color.x = toSRGB(pixel_color.x);
+	pixel_color.y = toSRGB(pixel_color.y);
+	pixel_color.z = toSRGB(pixel_color.z);
 	return pixel_color;
 }
 
@@ -301,17 +309,22 @@ RT_PROGRAM void diffuse() {
 		float z2 = rnd(current_prd.seed);
 		float3 p;
 		cosine_sample_hemisphere(z1, z2, p);
+
+		// make glossy materials
+		p.z *= 2.2;
+		p = normalize(p);
 		float3 v1, v2;
 		createONB(ffnormal, v1, v2);
 		current_prd.direction = v1 * p.x + v2 * p.y + ffnormal * p.z;
 	//}
 
 	//float3 normal_color = (normalize(world_shading_normal) * 0.5f + 0.5f) * 0.9;
+	// (1.0 - p.z) * current_prd.attenuation +
 	current_prd.attenuation = current_prd.attenuation * diffuse_color; // use the diffuse_color as the diffuse response
 	current_prd.countEmitted = false;
 
 	// Compute light...
-	current_prd.radiance = make_float3(0.0f);
+	current_prd.radiance += diffuse_color * 0.0; //make_float3(0.0f);
 }
 
 rtDeclareVariable(float3,        glass_color, , );
@@ -374,9 +387,9 @@ RT_PROGRAM void miss() {
 	float u = (theta + M_PIf) * (0.5f * M_1_PIf);
 	float v = 0.5f * (1.0f + sin(phi));
 	float3 emap = make_float3(tex2D(envmap, u + lightmap_y_rot, v));
-	//emap = emap + 2*powf(emap, 2.0f) + 4*powf(emap, 3.0f)+ 3*powf(emap, 4.0f) + 2*powf(emap, 5.0f);
+	//emap = make_float3(1.0, 1.0, 1.0);
 
-	current_prd.radiance = emap;
+	current_prd.radiance += emap;
 	current_prd.done = true;
 }
 

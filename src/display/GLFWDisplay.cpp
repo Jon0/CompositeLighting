@@ -13,8 +13,10 @@
 
 namespace std {
 
+uint GLFWDisplay::width, GLFWDisplay::height;
 int GLFWDisplay::mb1, GLFWDisplay::mb2;
 double GLFWDisplay::mx, GLFWDisplay::my;
+Arcball *GLFWDisplay::arcball;
 Scene *GLFWDisplay::sn;
 Camera *GLFWDisplay::cam;
 PathTracer *GLFWDisplay::ptr;
@@ -61,8 +63,9 @@ void GLFWDisplay::run(PathTracer &pt) {
 	}
     RTsize buffer_width_rts, buffer_height_rts;
     shared_buffer->getSize( buffer_width_rts, buffer_height_rts );
-    int width  = static_cast<int>(buffer_width_rts);
-    int height = static_cast<int>(buffer_height_rts);
+    width  = static_cast<int>(buffer_width_rts);
+    height = static_cast<int>(buffer_height_rts);
+    arcball = new Arcball(width, height);
 
     // complete window setup
     glfwSetWindowTitle(window, "path_tracer");
@@ -92,11 +95,9 @@ void GLFWDisplay::run(PathTracer &pt) {
 	}
 }
 
-void GLFWDisplay::draw(optix::Buffer) {
-
-}
-
 void GLFWDisplay::keyFunc(GLFWwindow *w, int key, int scan, int act, int) {
+	float rspeed = 0.005f, pspeed = 0.03;
+
 	if (act == GLFW_PRESS && isdigit(key)) {
 		unsigned int newmode = key - '0';
 		ptr->setDisplayMode(newmode);
@@ -106,14 +107,56 @@ void GLFWDisplay::keyFunc(GLFWwindow *w, int key, int scan, int act, int) {
 		sutilDisplayFilePPM( fname.c_str(), ptr->getOutputBuffer()->get() );
 		cout << "saved as " << fname << endl;
 	}
-	else if (act == GLFW_PRESS && key == GLFW_KEY_R) {
+	else if (act == GLFW_PRESS && key == GLFW_KEY_I) {
+		sn->select();
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_O) {
 		cam->reset();
 	}
-	else if (act == GLFW_PRESS && key == GLFW_KEY_UP) {
-		sn->modify(0.0f, 1.0f, 0.0f);
+	else if (act == GLFW_PRESS && key == GLFW_KEY_P) {
+		cam->printAngle();
 	}
-	else if (act == GLFW_PRESS && key == GLFW_KEY_DOWN) {
-		sn->modify(0.0f, -1.0f, 0.0f);
+	else if (act == GLFW_PRESS && key == GLFW_KEY_K) {
+		cam->modifyExposure(1.1);
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_L) {
+		cam->modifyExposure(0.9);
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_Q) {
+		sn->move(glm::vec3(pspeed, 0.0f, 0.0f));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_W) {
+		sn->move(glm::vec3(-pspeed, 0.0f, 0.0f));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_E) {
+		sn->move(glm::vec3(0.0f, pspeed, 0.0f));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_R) {
+		sn->move(glm::vec3(0.0f, -pspeed, 0.0f));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_T) {
+		sn->move(glm::vec3(0.0f, 0.0f, pspeed));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_Y) {
+		sn->move(glm::vec3(0.0f, 0.0f, -pspeed));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_Z) {
+		sn->rotate(glm::quat(glm::vec3(rspeed, 0.0f, 0.0f)));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_X) {
+		sn->rotate(glm::quat(glm::vec3(-rspeed, 0.0f, 0.0f)));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_C) {
+		sn->rotate(glm::quat(glm::vec3(0.0f, rspeed, 0.0f)));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_V) {
+		sn->rotate(glm::quat(glm::vec3(0.0f, -rspeed, 0.0f)));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_B) {
+		sn->rotate(glm::quat(glm::vec3(0.0f, 0.0f, rspeed)));
+	}
+	else if (act == GLFW_PRESS && key == GLFW_KEY_N) {
+		sn->rotate(glm::quat(glm::vec3(0.0f, 0.0f, -rspeed)));
 	}
 	else if (act == GLFW_PRESS) {
 		ptr->keyPressed(key);
@@ -122,14 +165,12 @@ void GLFWDisplay::keyFunc(GLFWwindow *w, int key, int scan, int act, int) {
 
 void GLFWDisplay::mouseFunc(GLFWwindow *w, int button, int act, int) {
 	if (act == GLFW_PRESS && button == 0) {
-		cout << "button " << button << endl;
 		mb1 = 1;
 	}
 	else {
 		mb1 = 0;
 	}
 	if (act == GLFW_PRESS && button == 1) {
-		cout << "button " << button << endl;
 		mb2 = 1;
 	}
 	else {
@@ -140,7 +181,7 @@ void GLFWDisplay::mouseFunc(GLFWwindow *w, int button, int act, int) {
 void GLFWDisplay::posFunc(GLFWwindow *w, double x, double y) {
 	// drag actions
 	if (mb1) {
-		cam->mouseDragRotation(mx, my, x, y);
+		sn->rotate( arcball->mouseDragged(mx, my, x, y, 0.1) );
 	}
 	if (mb2) {
 		cam->mouseDragPanning(x - mx, y - my);
@@ -151,10 +192,10 @@ void GLFWDisplay::posFunc(GLFWwindow *w, double x, double y) {
 
 void GLFWDisplay::scrollFunc(GLFWwindow *, double x, double y) {
 	if (y > 0) {
-		cam->zoom(1.05f);
+		sn->zoom( 1.05f );
 	}
 	else {
-		cam->zoom(0.95f);
+		sn->zoom( 0.95f );
 	}
 }
 

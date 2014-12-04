@@ -32,6 +32,7 @@ public:
 	shared_ptr<Scene> readScene();
 
 private:
+	bool hasOption(string);
 	void addOption(string);
 	void loadConfig(string);
 

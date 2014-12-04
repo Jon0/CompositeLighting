@@ -39,24 +39,67 @@ SceneParser::~SceneParser() {}
 
 shared_ptr<Scene> SceneParser::readScene() {
 	loadConfig(fname);
+
+	/*
+	 * the scene being constructed
+	 */
+	shared_ptr<Scene> s = make_shared<Scene>();
+
+	/*
+	 * directory containing assets
+	 */
 	string basepath = options["directory"];
 
+
 	// load data from image file
-	string colorpath = basepath + options["photo_color"];
-	string depthpath = basepath + options["photo_depth"];
-	Mat pcolor = imread(colorpath, CV_LOAD_IMAGE_COLOR);
-	Mat pdepth = imread(depthpath, CV_LOAD_IMAGE_COLOR);
+	if ( hasOption("photo_color") ) {
+		string colorpath = basepath + options["photo_color"];
+		Mat pcolor = imread(colorpath, CV_LOAD_IMAGE_COLOR);
+		s->setPhoto(pcolor);
+	}
 
-	string lmpath = basepath + options["lightmap"];
-	Mat lmap = imread(lmpath, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-	//loadExrTexture( lightMapPath().c_str(), context, false );
+	if ( hasOption("photo_depth") ) {
+		string depthpath = basepath + options["photo_depth"];
+		Mat pdepth = imread(depthpath, CV_LOAD_IMAGE_COLOR);
+		s->setDepthPhoto(pdepth);
+	}
 
+	if ( hasOption("lightmap") ) {
+		string lmpath = basepath + options["lightmap"];
+		Mat lmap = imread(lmpath, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		s->setLightMap(lmap);
+	}
 
-	 shared_ptr<Scene> s = make_shared<Scene>();
-	 s->setPhoto(pcolor);
-	 s->setDepthPhoto(pdepth);
-	 s->setLightMap(lmap);
-	 return s;
+	if ( hasOption("local_model") ) {
+		s->addGeometry(basepath + options["local_model"], true);
+	}
+
+	if ( hasOption("virtual_model") ) {
+		s->addGeometry(basepath + options["virtual_model"], false);
+	}
+
+	if ( hasOption("camera") ) {
+		 //s->setCamAngle(glm::quat(-0.0754814, 6.97229e-05, 0.989809, -0.121214), glm::vec3(-0.24233, 0.804301, -0.098939), 10.1601, 15.0);
+	}
+	if ( hasOption("camera_angle") ) {
+		vector<string> a = split(options["camera_angle"], ',');
+		s->setCamAngle( glm::quat(stof(a[0]), stof(a[1]), stof(a[2]), stof(a[3])) );
+	}
+	if ( hasOption("camera_pos") ) {
+		vector<string> a = split(options["camera_pos"], ',');
+		s->setCamPos( glm::vec3(stof(a[0]), stof(a[1]), stof(a[2])) );
+	}
+	if ( hasOption("camera_zoom") ) {
+		s->setCamZoom( stof(options["camera_zoom"]) );
+	}
+	if ( hasOption("camera_vfov") ) {
+		s->setCamFov( stof(options["camera_vfov"]) );
+	}
+	return s;
+}
+
+bool SceneParser::hasOption(string op) {
+	return (options.count(op) > 0);
 }
 
 void SceneParser::addOption(string op) {

@@ -26,13 +26,15 @@ public:
 	PolygonMesh(Model &);
 	virtual ~PolygonMesh();
 
-	virtual void move(float, float, float);
-
 	virtual optix::Transform get();
 
 	virtual optix::GeometryInstance makeGeometry(optix::Context &m_context, optix::Material);
 
-	void setPosition(optix::Transform &, optix::float3);
+	virtual void zoom(float);
+	virtual void move(glm::vec3);
+	virtual void rotate(glm::quat);
+
+	void setPosition(optix::Transform &, optix::float3, glm::quat);
 
 	void setMaterial( optix::GeometryInstance& gi,
 						optix::Material material,
@@ -42,6 +44,7 @@ public:
 	static void initialise(optix::Context);
 
 private:
+	glm::quat model_rot;
 	Model model;
 	static bool initialised;
 	static optix::Program bounding_box;

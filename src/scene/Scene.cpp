@@ -21,8 +21,14 @@ namespace std {
 Scene::Scene() {
 	initialised = false;
 	modified = false;
-	addModel(models, "resource/dragon.obj", 5, optix::make_float3( 1.5f, -2.0f, 12.0f ),
-			optix::make_float3( 0.3f, 0.95f, 0.45f ));
+	mod_objs.push_back(&camera);
+	select_index = 0;
+	addModel(models, "resource/dragon.obj", 1, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.95f, 0.10f, 0.02f ));
+
+	addModel(models, "resource/waterglass.obj", 0.1, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+			optix::make_float3( 0.85f, 0.85f, 0.22f ));
+
 }
 
 Scene::~Scene() {}
@@ -37,12 +43,38 @@ void Scene::setPhoto(cv::Mat &c) {
 void Scene::setDepthPhoto(cv::Mat &d) {
 	ImageCoverter cc;
 	PointCloud cl = cc.makePointCloud(d, &camera);
-	//cl.load(path+"scene1_0.pcd");
 	local_models.push_back(make_shared<PointCloud>(cl));
 }
 
 void Scene::setLightMap(cv::Mat &lm) {
 	lightmap = lm;
+}
+
+void Scene::setCamPos(glm::vec3 v) {
+	camera.setPos(v);
+}
+
+void Scene::setCamAngle(glm::quat q) {
+	camera.setAngle(q);
+}
+
+void Scene::setCamZoom(float z) {
+	camera.setZoom(z);
+}
+
+void Scene::setCamFov(float f) {
+	camera.setFov(f);
+}
+
+void Scene::addGeometry(string s, bool local) {
+	if (local) {
+		addModel(local_models, s, 5, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+				optix::make_float3( 0.95f, 0.95f, 0.95f ));
+	}
+	else {
+		addModel(models, s, 5, optix::make_float3( 0.0f, 0.0f, 0.0f ),
+				optix::make_float3( 0.95f, 0.95f, 0.95f ));
+	}
 }
 
 void Scene::init(optix::Context &m_context) {
@@ -72,7 +104,9 @@ void Scene::addModel(geom_list &set, string fname, float scale, optix::float3 po
 	m.transform = optix::Matrix4x4(f);
 	m.colour = c;
 	m.position = pos;
-	set.push_back(make_shared<PolygonMesh>(m));
+	shared_ptr<PolygonMesh> pm = make_shared<PolygonMesh>(m);
+	set.push_back(pm);
+	mod_objs.push_back(&*pm);
 }
 
 void Scene::setMaterialPrograms(optix::Program ch, optix::Program ah) {
@@ -80,11 +114,29 @@ void Scene::setMaterialPrograms(optix::Program ch, optix::Program ah) {
 	diffuse_ah = ah;
 }
 
-void Scene::modify(float x, float y, float z) {
-	for (int i = 0; i < models.size(); ++i) {
-		models[i]->move(x, y, z);
-	}
+void Scene::select() {
+	select_index = (select_index + 1) % mod_objs.size();
+	cout << "selected " << select_index << endl;
+}
+
+void Scene::zoom(float z) {
+	mod_objs[select_index]->zoom(z);
 	maingroup->getAcceleration()->markDirty();
+	localgroup->getAcceleration()->markDirty();
+	modified = true;
+}
+
+void Scene::move(glm::vec3 v) {
+	mod_objs[select_index]->move(v);
+	maingroup->getAcceleration()->markDirty();
+	localgroup->getAcceleration()->markDirty();
+	modified = true;
+}
+
+void Scene::rotate(glm::quat q) {
+	mod_objs[select_index]->rotate(q);
+	maingroup->getAcceleration()->markDirty();
+	localgroup->getAcceleration()->markDirty();
 	modified = true;
 }
 
@@ -135,13 +187,6 @@ optix::Material Scene::createMaterials(string name) {
 }
 
 void Scene::setCamera() {
-	// input camera location
-	optix::float3 eye = optix::make_float3(0.0f, 0.0f, -12.0f); // eye
-	optix::float3 lookat = optix::make_float3(0.0f, 0.0f, 0.0f);    // lookat
-	optix::float3 up = optix::make_float3(0.0f, 1.0f, 0.0f);       // up
-	float fov = 40.0f;
-
-	// Initialize camera according to scene params
 	camera.resize(photo_color.cols, photo_color.rows);
 }
 

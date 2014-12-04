@@ -16,6 +16,7 @@
 #include <optixu/optixpp_namespace.h>
 
 #include "../PathTracer.h"
+#include "Arcball.h"
 #include "GLrenderer.h"
 
 namespace std {
@@ -26,16 +27,16 @@ public:
 	virtual ~GLFWDisplay();
 
 	void setBuffer(optix::Buffer);
-
 	void run(PathTracer &);
-	void draw(optix::Buffer);
 
 private:
 	GLFWwindow *window;
 	optix::Buffer shared_buffer;
 
+	static uint width, height;
 	static int mb1, mb2;
 	static double mx, my;
+	static Arcball *arcball;
 	static Scene *sn;
 	static Camera *cam;
 	static PathTracer *ptr;

@@ -35,36 +35,14 @@ void PathTracer::setScene(shared_ptr<Scene> s, bool prepare) {
 
 void PathTracer::keyPressed(unsigned char key) {
 	//std::cout << lightmap_y_rot << std::endl;
-	if (key == 'J') {
-		lightmap_y_rot += 0.01;
-		optix_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
-	}
-	else if (key == 'K') {
-		lightmap_y_rot -= 0.01;
-		optix_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
-	}
-	else if (key == 'Q') {
-		scene->modify(1.0f, 0.0f, 0.0f);
-	}
-	else if (key == 'W') {
-		scene->modify(-1.0f, 0.0f, 0.0f);
-	}
-	else if (key == 'A') {
-		scene->modify(0.0f, 1.0f, 0.0f);
-	}
-	else if (key == 'S') {
-		scene->modify(0.0f, -1.0f, 0.0f);
-	}
-	else if (key == 'Z') {
-		scene->modify(0.0f, 0.0f, 1.0f);
-	}
-	else if (key == 'X') {
-		scene->modify(0.0f, 0.0f, -1.0f);
-	}
-	else if (isdigit(key)) {
-		unsigned int newmode = key - '0';
-		setDisplayMode(newmode);
-	}
+//	if (key == 'J') {
+//		lightmap_y_rot += 0.01;
+//		optix_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
+//	}
+//	else if (key == 'K') {
+//		lightmap_y_rot -= 0.01;
+//		optix_context["lightmap_y_rot"]->setFloat(lightmap_y_rot);
+//	}
 }
 
 void PathTracer::resetScene() {
@@ -81,14 +59,7 @@ void PathTracer::resetScene() {
 	optix_context["display_mode"]->setUint(1);
 
 	// Declare these so validation will pass
-    float3 eye, U, V, W;
-    Camera *c = scene->getCam();
-	c->getEyeUVW( eye, U, V, W );
-	optix_context["eye"]->setFloat(eye);
-	optix_context["U"]->setFloat(U);
-	optix_context["V"]->setFloat(V);
-	optix_context["W"]->setFloat(W);
-
+	updateCamera();
 	optix_context["sqrt_num_samples"]->setUint(m_sqrt_num_samples);
 	optix_context["bad_color"]->setFloat(0.0f, 1.0f, 0.0f);
 	optix_context["bg_color"]->setFloat(make_float3(0.0f));
@@ -136,6 +107,18 @@ void PathTracer::resetScene() {
 	optix_context->compile();
 }
 
+void PathTracer::updateCamera() {
+    float3 eye, U, V, W;
+    Camera *c = scene->getCam();
+    c->update(0.0f);
+	c->getEyeUVW( eye, U, V, W );
+	optix_context["eye"]->setFloat(eye);
+	optix_context["U"]->setFloat(U);
+	optix_context["V"]->setFloat(V);
+	optix_context["W"]->setFloat(W);
+	optix_context["exposure"]->setFloat(c->cameraExposure());
+}
+
 void PathTracer::setDisplayMode(unsigned int newmode) {
 	std::cout << "set display mode " << newmode << std::endl;
 	optix_context["display_mode"]->setUint(newmode);
@@ -143,17 +126,7 @@ void PathTracer::setDisplayMode(unsigned int newmode) {
 
 void PathTracer::trace() {
     if (scene->isModified()) {
-        Camera *c = scene->getCam();
-    	c->update(0.0f);
-
-        float3 eye, U, V, W;
-    	c->getEyeUVW( eye, U, V, W );
-
-		cout << eye << U << V << W << endl;
-		optix_context["eye"]->setFloat(eye);
-		optix_context["U"]->setFloat(U);
-		optix_context["V"]->setFloat(V);
-		optix_context["W"]->setFloat(W);
+    	updateCamera();
 		m_frame = 1;
 		scene->setModified(false);
     }

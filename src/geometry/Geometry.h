@@ -10,13 +10,17 @@
 
 #include <optixu/optixpp_namespace.h>
 
+#include "../scene/Modifiable.h"
+
 namespace std {
 
-class Geometry {
+class Geometry: public Modifiable {
 public:
 	virtual ~Geometry() {}
 
-	virtual void move(float, float, float) = 0;
+	virtual void zoom(float) = 0;
+	virtual void move(glm::vec3) = 0;
+	virtual void rotate(glm::quat) = 0;
 
 	virtual optix::Transform get() = 0;
 
