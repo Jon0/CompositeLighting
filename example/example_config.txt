@@ -1,0 +1,8 @@
+directory = example/
+photo_color = photo.jpg
+lightmap = CO332_25-09-2014_5pm_2k.exr
+local_model = kinectscene1.obj
+camera_vfov = 15.0
+camera_zoom = 10.1601
+camera_pos = -0.30233, 0.864301, -0.098939
+camera_angle = -0.0804296, -0.000536347, 0.989421, -0.121213

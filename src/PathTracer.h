@@ -21,7 +21,12 @@
 
 namespace std {
 
-const char* const ptxpath( const std::string&, const std::string& );
+/**
+ * find a cuda compiled binary file path
+ * @param target the name of the project
+ * @param base the name of the source file 
+ */
+const char* const ptxpath( const std::string &target, const std::string &base );
 
 //-----------------------------------------------------------------------------
 //
@@ -30,7 +35,8 @@ const char* const ptxpath( const std::string&, const std::string& );
 //-----------------------------------------------------------------------------
 class PathTracer {
 public:
-	// Set the actual render parameters below in main().
+	// Default parameters
+	// Set the actual render parameters in main().
 	PathTracer() :
 			m_rr_begin_depth(1u), m_max_depth(1u), m_sqrt_num_samples(1u),
 			m_width(512u), m_height(512u), m_use_vbo_buffer( true ),
@@ -59,7 +65,14 @@ public:
 	void setDisplayMode(unsigned int);
 
 private:
+	/**
+	 * the main setup function
+	 */
 	void resetScene();
+
+	/**
+	 * pass updated params to the gpu
+	 */
 	void updateCamera();
 
 	optix::Context optix_context;

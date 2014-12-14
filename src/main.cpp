@@ -5,9 +5,6 @@
 using namespace std;
 using namespace optix;
 
-// Initialise glew / opengl display first
-GLFWDisplay d;
-
 //-----------------------------------------------------------------------------
 //
 // main
@@ -19,6 +16,10 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 	srand(time(NULL));
+
+	// Initialise glew / opengl display first
+
+	GLFWDisplay display;
 
 	// Construct the scene
 	// This specifies scene geometry, light map and camera angle
@@ -33,8 +34,8 @@ int main(int argc, char** argv) {
 
 	// pass output buffer to the display
 
-	d.setBuffer( pt.getOutputBuffer() );
-	d.run( pt );
+	display.setBuffer( pt.getOutputBuffer() );
+	display.run( pt );
 
-	return 0;
+	exit(0);
 }

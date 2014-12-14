@@ -1,10 +1,3 @@
-/*
- * PathTracer.cpp
- *
- *  Created on: 7/08/2014
- *      Author: asdf
- */
-
 #include <iostream>
 
 #include <optixu/optixu_math_stream_namespace.h>
@@ -18,6 +11,8 @@ namespace std {
 
 const char* const ptxpath( const std::string& target, const std::string& base ) {
   static std::string path;
+
+  // the compiled cuda files
   path = std::string(sutilSamplesPtxDir()) + "/" + target + "_generated_" + base + ".ptx";
   return path.c_str();
 }
